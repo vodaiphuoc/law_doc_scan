@@ -14,6 +14,7 @@ class Image_PreProcessing(object):
                 size = (config.target_title_size, config.target_title_size), 
                 interpolation=InterpolationMode.BILINEAR
             ),
+            T.ToTensor(),
             T.Normalize(mean=config.transform_mean, std=config.transform_std)
         ])
     
@@ -105,10 +106,10 @@ class Image_PreProcessing(object):
                 max_num=self.config.max_num
             )
             batch_titles.extend([
-                T.functional.pil_to_tensor(_title).to(torch.bfloat16)
+                self.transform_compose(_title)
                 for _title in titles
             ])
         
         titles_tensor = torch.stack(batch_titles)
         print('titles_tensor shape: ', titles_tensor.shape)
-        return self.transform_compose(titles_tensor)
+        return titles_tensor
