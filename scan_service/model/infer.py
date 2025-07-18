@@ -10,15 +10,17 @@ MODEL_DTYPE = torch.bfloat16
 
 class ModelWrapper(object):
 
-    question = f"""<image>\nTrích xuất thông tin trong văn bản. 
-đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Ký hiệu văn bản**
-**Thể loại văn bản**
-**tóm tắt văn bản**
-**Tên người ký ở cuối văn bản**
-"""
+    question = f"""<image>\nCơ quan nào ban hành văn bản ?"""
+
+#     question = f"""<image>\nTrích xuất thông tin trong văn bản. 
+# đầu ra theo format JSON được mô tả sau đây:
+# **Cơ quan ban hành văn bản**
+# **Số  hiệu văn bản**
+# **Ký hiệu văn bản**
+# **Thể loại văn bản**
+# **tóm tắt văn bản**
+# **Tên người ký ở cuối văn bản**
+# """
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
@@ -29,14 +31,14 @@ class ModelWrapper(object):
             torch_dtype = MODEL_DTYPE,
             trust_remote_code = True,
             use_flash_attn = can_use_flash_attn,
-            revision="main",  # Pin to main branch
+            revision="main",
         ).eval()
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             config.model_id,
             trust_remote_code=True,
             use_fast=False,
-            revision="main"  # Pin to main branch
+            revision="main"
         )
 
         self.pre_process = Image_PreProcessing(config = config)
