@@ -26,6 +26,6 @@ class ModelConfig(BaseModel):
         description="target titles'size to resize"
     )
 
-    max_num: int = 12
+    max_num: int = 6
     
     generation_config: Dict[str, Union[bool, int, float]] = GenerationConfig().model_dump()
