@@ -47,7 +47,6 @@ class Fields2Extract(BaseModel):
     summarization: str = Field(
         description="Trích yếu nội dung trong văn bản"
     )
- 
 
     signing_person: str = Field(
         description="Tên người ký ở cuối văn bản"
