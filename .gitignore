@@ -2,3 +2,4 @@ myenv/
 archives/
 frontend/
 __pycache__
+*.pdf

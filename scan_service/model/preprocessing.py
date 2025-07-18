@@ -9,7 +9,7 @@ from configs.model import ModelConfig
 class Image_PreProcessing(object):
     def __init__(self, config: ModelConfig):
         self.config = config
-        self.transform = T.Compose([
+        self.transform_compose = T.Compose([
             T.Resize(
                 size = (config.target_title_size, config.target_title_size), 
                 interpolation=InterpolationMode.BILINEAR
@@ -105,8 +105,9 @@ class Image_PreProcessing(object):
                 max_num=self.config.max_num
             )
             batch_titles.extend([
-                T.functional.pil_to_tensor(_title) 
+                T.functional.pil_to_tensor(_title).to(torch.bfloat16)
                 for _title in titles
             ])
         
-        return self.transform(torch.stack(batch_titles))
+        titles_tensor = torch.stack(batch_titles)
+        return self.transform_compose(titles_tensor)
