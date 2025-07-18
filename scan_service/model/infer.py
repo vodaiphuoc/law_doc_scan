@@ -41,8 +41,6 @@ class ModelWrapper(object):
         pages_images = pdf2images(local_path_pdf)
         batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.device)
 
-        
-
         response = self.model.chat(
             tokenizer = self.tokenizer, 
             pixel_values = batch_titles,
