@@ -18,20 +18,20 @@ class ModelWrapper(object):
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
 
-        # self.model = AutoModel.from_pretrained(
-        #     config.model_id,
-        #     torch_dtype = MODEL_DTYPE,
-        #     trust_remote_code = True,
-        #     use_flash_attn = can_use_flash_attn,
-        #     revision="main",  # Pin to main branch
-        # ).to(self.device).eval()
+        self.model = AutoModel.from_pretrained(
+            config.model_id,
+            torch_dtype = MODEL_DTYPE,
+            trust_remote_code = True,
+            use_flash_attn = can_use_flash_attn,
+            revision="main",  # Pin to main branch
+        ).to(self.device).eval()
 
-        # self.tokenizer = AutoTokenizer.from_pretrained(
-        #     config.model_id,
-        #     trust_remote_code=True,
-        #     use_fast=False,
-        #     revision="main"  # Pin to main branch
-        # )
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            config.model_id,
+            trust_remote_code=True,
+            use_fast=False,
+            revision="main"  # Pin to main branch
+        )
 
         self.pre_process = Image_PreProcessing(config = config)
 
