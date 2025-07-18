@@ -16,7 +16,7 @@ class ModelWrapper(object):
 **Số  hiệu văn bản**
 **Ký hiệu văn bản**
 **Thể loại văn bản**
-**tóm tắt**
+**tóm tắt văn bản**
 **Tên người ký ở cuối văn bản**
 """
 
