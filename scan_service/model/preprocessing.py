@@ -110,4 +110,5 @@ class Image_PreProcessing(object):
             ])
         
         titles_tensor = torch.stack(batch_titles)
+        print('titles_tensor shape: ', titles_tensor.shape)
         return self.transform_compose(titles_tensor)

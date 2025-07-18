@@ -10,17 +10,17 @@ MODEL_DTYPE = torch.bfloat16
 
 class ModelWrapper(object):
 
-    question = f"""<image>\nCơ quan nào ban hành văn bản ?"""
+    # question = f"""<image>\nCơ quan nào ban hành văn bản ?"""
 
-#     question = f"""<image>\nTrích xuất thông tin trong văn bản. 
-# đầu ra theo format JSON được mô tả sau đây:
-# **Cơ quan ban hành văn bản**
-# **Số  hiệu văn bản**
-# **Ký hiệu văn bản**
-# **Thể loại văn bản**
-# **tóm tắt văn bản**
-# **Tên người ký ở cuối văn bản**
-# """
+    question = f"""<image>\nTrích xuất thông tin trong văn bản. 
+đầu ra theo format JSON được mô tả sau đây:
+**Cơ quan ban hành văn bản**
+**Số  hiệu văn bản**
+**Ký hiệu văn bản**
+**Thể loại văn bản**
+**tóm tắt văn bản**
+**Tên người ký ở cuối văn bản**
+"""
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
