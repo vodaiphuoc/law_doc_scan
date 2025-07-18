@@ -25,7 +25,7 @@ class ModelWrapper(object):
             trust_remote_code = True,
             use_flash_attn = can_use_flash_attn,
             revision="main",  # Pin to main branch
-        ).to(self.device).eval()
+        ).eval()
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             config.model_id,
@@ -41,7 +41,7 @@ class ModelWrapper(object):
     def forward(self, local_path_pdf:str):
         print('local_path_pdf: ', local_path_pdf)
         pages_images = pdf2images(local_path_pdf)
-        batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.device)
+        batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
 
         response = self.model.chat(
             tokenizer = self.tokenizer, 
