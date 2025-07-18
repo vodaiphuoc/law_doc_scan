@@ -27,7 +27,7 @@ class ModelWrapper(object):
 
         self.model = AutoModel.from_pretrained(
             config.model_id,
-            load_in_8bit=True,
+            # load_in_8bit=True,
             torch_dtype = MODEL_DTYPE,
             trust_remote_code = True,
             use_flash_attn = can_use_flash_attn,
