@@ -38,6 +38,7 @@ class ModelWrapper(object):
         self._generation_config = config.generation_config
 
     def forward(self, local_path_pdf:str):
+        print('local_path_pdf: ', local_path_pdf)
         pages_images = pdf2images(local_path_pdf)
         batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.device)
 

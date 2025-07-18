@@ -10,12 +10,10 @@ class Image_PreProcessing(object):
     def __init__(self, config: ModelConfig):
         self.config = config
         self.transform = T.Compose([
-            T.Lambda(lambda img: img.convert('RGB') if img.mode != 'RGB' else img),
             T.Resize(
                 size = (config.target_title_size, config.target_title_size), 
                 interpolation=InterpolationMode.BILINEAR
             ),
-            T.ToTensor(),
             T.Normalize(mean=config.transform_mean, std=config.transform_std)
         ])
     
@@ -106,10 +104,9 @@ class Image_PreProcessing(object):
                 use_thumbnail=True, 
                 max_num=self.config.max_num
             )
-
             batch_titles.extend([
-                self.transform(_title) 
+                T.functional.pil_to_tensor(_title) 
                 for _title in titles
             ])
-
-        return torch.stack(batch_titles)
+        
+        return self.transform(torch.stack(batch_titles))
