@@ -40,7 +40,7 @@ class ModelWrapper(object):
 
     def forward(self, local_path_pdf:str):
         print('local_path_pdf: ', local_path_pdf)
-        pages_images = pdf2images(local_path_pdf)
+        pages_images = pdf2images(local_path_pdf)[0]
         batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
 
         response = self.model.chat(
