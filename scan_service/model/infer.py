@@ -17,12 +17,13 @@ class ModelWrapper(object):
     inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
 
     query = """
-Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn bản
+Bây giờ, với văn bản: <image>\n, trích xuất thông tin trong văn bản
 - đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
 **Số  hiệu văn bản**
 **Ký hiệu văn bản**
 **Thể loại văn bản**
+**Tóm tắt văn bản**
 **Tên người ký ở cuối văn bản**
 """
 
@@ -92,8 +93,8 @@ Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn b�
                                     history=history, return_history=True)
         print(f'User: {question}\nAssistant: {response}')
         """
-        pages_images = pdf2images(local_path_pdf)[0]
-        batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
+        pages_images = pdf2images(local_path_pdf)
+        batch_titles_per_doc = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
 
         pixel_values_list = []
         num_patches_list = []
@@ -104,13 +105,13 @@ Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn b�
             num_patches_list.extend(self.default_num_patches_list)
             
         else:
-            question = self.query
+            multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(batch_titles_per_doc))])
+            question = self.query.replace('<image>',multi_pages_image_token)
 
-        pixel_values_list.append(batch_titles)
+        pixel_values_list.extend(batch_titles_per_doc)
         pixel_values = torch.cat(pixel_values_list, dim=0)
 
-        num_patches_list.append(batch_titles.shape[0])
-
+        num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in batch_titles_per_doc])
 
         print('debugging: ')
         print('question: ', question)
