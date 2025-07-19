@@ -92,12 +92,12 @@ class Image_PreProcessing(object):
             page_imgs (Union[Image.Image, List[Image.Image]]): single or list of page image
 
         Returns:
-            stack tensor of titles of all pages in a document
+            list of stack titles'tensor for all pages of a document
         """
         if not isinstance(page_imgs, list):
             page_imgs = [page_imgs]
 
-        batch_titles = []
+        list_batch_titles = []
         for _page_img in page_imgs:
             titles = Image_PreProcessing._dynamic_preprocess(
                 _page_img,
@@ -105,10 +105,9 @@ class Image_PreProcessing(object):
                 use_thumbnail=True, 
                 max_num=self.config.max_num
             )
-            batch_titles.extend([
+            list_batch_titles.append(torch.stack([
                 self.transform_compose(_title)
                 for _title in titles
-            ])
+            ]))
         
-        
-        return batch_titles
+        return list_batch_titles

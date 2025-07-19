@@ -17,7 +17,7 @@ class ModelWrapper(object):
     inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
 
     query = """
-Bây giờ, với văn bản: <image>\n, trích xuất thông tin trong văn bản
+Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
 - đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
 **Số  hiệu văn bản**
@@ -94,7 +94,10 @@ Bây giờ, với văn bản: <image>\n, trích xuất thông tin trong văn b�
         print(f'User: {question}\nAssistant: {response}')
         """
         pages_images = pdf2images(local_path_pdf)
+        print('num pages: ', len(pages_images))
         batch_titles_per_doc = self.pre_process.transform(pages_images)
+
+        assert len(batch_titles_per_doc) == len(pages_images)
 
         pixel_values_list = []
         num_patches_list = []
