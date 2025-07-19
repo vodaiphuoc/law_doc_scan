@@ -48,7 +48,7 @@ class ModelWrapper(object):
             for _ith, _exp in \
                 enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
                 
-                _pixel_values = self.pre_process.transform(pdf2images(_exp.url)[0]).to(MODEL_DTYPE).to(self.model.device)
+                _pixel_values = self.pre_process.transform(pdf2images(_exp.url.encoded_string())[0]).to(MODEL_DTYPE).to(self.model.device)
                 self.default_pixel_values_list.append(_pixel_values)
                 self.default_num_patches_list.append(_pixel_values.shape[0])
 
