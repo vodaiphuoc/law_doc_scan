@@ -4,27 +4,23 @@ import torch
 from configs.model import ModelConfig
 from utils import get_device, pdf2images
 from model.preprocessing import Image_PreProcessing
+from model.examples import Examples
 from commons.schemas.model import Fields2Extract
+
 
 MODEL_DTYPE = torch.bfloat16
 
 class ModelWrapper(object):
 
-    # question = f"""<image>\nCơ quan nào ban hành văn bản ?"""
+    example_inst = "Dưới đây là một số ví dụ:\n{example_details}"
 
-    question = f"""<image>\nTrích xuất thông tin trong văn bản. 
-đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Ký hiệu văn bản**
-**Thể loại văn bản**
-**tóm tắt văn bản**
-**Tên người ký ở cuối văn bản**
-"""
+    inst = "Nhiệm vụ của bạn trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}\n"
+
+    query = "Trích xuất thông tin trong văn bản sau:\n<image>\n"
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
-
+        self.config = config
         self.model = AutoModel.from_pretrained(
             config.model_id,
             # load_in_8bit=True,
@@ -45,16 +41,71 @@ class ModelWrapper(object):
 
         self._generation_config = config.generation_config
 
+        self.default_pixel_values_list = []
+        self.default_num_patches_list = []
+        if config.fewshotconfig.build_examples:    
+            example_details = ""
+            for _ith, _exp in \
+                enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
+                
+                _pixel_values = self.pre_process.transform(pdf2images(_exp.url)[0]).to(MODEL_DTYPE).to(self.model.device)
+                self.default_pixel_values_list.append(_pixel_values)
+                self.default_num_patches_list.append(_pixel_values.shape[0])
+
+                example_details += f"Ví dụ {_ith}:\n" + _exp.tostring
+            
+            self.question = self.inst.format(
+                example_content = self.example_inst.format(example_details = example_details)
+            )
+            
+        else:
+            self.question = ""
+
     def forward(self, local_path_pdf:str):
-        print('local_path_pdf: ', local_path_pdf)
+        r"""
+        <https://huggingface.co/OpenGVLab/InternVL-Chat-V1-5>
+        # multi-image multi-round conversation, separate images (多图多轮对话，独立图像)
+        pixel_values1 = load_image('./examples/image1.jpg', max_num=12).to(torch.bfloat16).cuda()
+        pixel_values2 = load_image('./examples/image2.jpg', max_num=12).to(torch.bfloat16).cuda()
+        pixel_values = torch.cat((pixel_values1, pixel_values2), dim=0)
+        num_patches_list = [pixel_values1.size(0), pixel_values2.size(0)]
+
+        question = 'Image-1: <image>\nImage-2: <image>\nDescribe the two images in detail.'
+        response, history = model.chat(tokenizer, pixel_values, question, generation_config,
+                                    num_patches_list=num_patches_list,
+                                    history=None, return_history=True)
+        print(f'User: {question}\nAssistant: {response}')
+
+        question = 'What are the similarities and differences between these two images.'
+        response, history = model.chat(tokenizer, pixel_values, question, generation_config,
+                                    num_patches_list=num_patches_list,
+                                    history=history, return_history=True)
+        print(f'User: {question}\nAssistant: {response}')
+        """
         pages_images = pdf2images(local_path_pdf)[0]
         batch_titles = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
 
-        print('batch_titles: ', batch_titles.shape)
+        pixel_values_list = []
+        num_patches_list = []
+        if self.config.fewshotconfig.build_examples:
+            question = self.question + self.query
+
+            pixel_values_list.extend(self.default_pixel_values_list)
+            num_patches_list.extend(self.default_num_patches_list)
+            
+        else:
+            question = self.query
+
+        pixel_values_list.append(batch_titles)
+        pixel_values = torch.cat(pixel_values_list, dim=0)
+
+        num_patches_list.append(batch_titles.shape[0])
+
         response = self.model.chat(
             tokenizer = self.tokenizer, 
-            pixel_values = batch_titles,
-            question = self.question, 
+            pixel_values = pixel_values,
+            question = question,
+            num_patches_list = num_patches_list,
             generation_config = self._generation_config
         )
 

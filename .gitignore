@@ -3,3 +3,5 @@ archives/
 frontend/
 __pycache__
 *.pdf
+_hf_cache
+test.py

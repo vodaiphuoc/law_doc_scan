@@ -3,6 +3,7 @@ from typing import Tuple, List
 import pymupdf
 from PIL import Image
 import io
+import requests
 
 def get_device()->Tuple[torch.device, bool]:
     """
@@ -20,11 +21,18 @@ def get_device()->Tuple[torch.device, bool]:
     
 ZOOM_MATRIX = pymupdf.Matrix(2.0, 2.0)
 
-def pdf2images(local_img_path:str)->List[Image.Image]:
+def pdf2images(img_path:str, is_remote_path: bool = False)->List[Image.Image]:
     r"""
     Conver one PDF doc to list of page images
+    Args:
+        img_path (str):  path to the pdf file, for remote file, its a url
+        is_remote_path (bool): local or remote path
     """
-    doc = pymupdf.open(local_img_path)
+    if is_remote_path:
+        response_data = requests.get(img_path)
+        doc = pymupdf.Document(stream=response_data.content)
+    else:
+        doc = pymupdf.open(img_path)
     images = []
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)

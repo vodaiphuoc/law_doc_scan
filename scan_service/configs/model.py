@@ -1,5 +1,20 @@
 from pydantic import BaseModel, Field
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple, Dict, List
+
+class FewShotConfig(BaseModel):
+    r"""
+    Config for few shot examples
+    """
+    build_examples:bool = Field(
+        default = True,
+        description="wether or not build few-shot examples"   
+    )
+
+    num_examples_to_use:int = Field(
+        default = 1,
+        description="number of examples to be used"   
+    )
+
 
 class GenerationConfig(BaseModel):
     max_new_tokens: int = 1024 
@@ -29,3 +44,5 @@ class ModelConfig(BaseModel):
     max_num: int = 12
     
     generation_config: Dict[str, Union[bool, int, float]] = GenerationConfig().model_dump()
+
+    fewshotconfig: FewShotConfig = FewShotConfig()
