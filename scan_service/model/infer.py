@@ -94,7 +94,7 @@ Bây giờ, với văn bản: <image>\n, trích xuất thông tin trong văn b�
         print(f'User: {question}\nAssistant: {response}')
         """
         pages_images = pdf2images(local_path_pdf)
-        batch_titles_per_doc = self.pre_process.transform(pages_images).to(MODEL_DTYPE).to(self.model.device)
+        batch_titles_per_doc = self.pre_process.transform(pages_images)
 
         pixel_values_list = []
         num_patches_list = []
@@ -109,7 +109,7 @@ Bây giờ, với văn bản: <image>\n, trích xuất thông tin trong văn b�
             question = self.query.replace('<image>',multi_pages_image_token)
 
         pixel_values_list.extend(batch_titles_per_doc)
-        pixel_values = torch.cat(pixel_values_list, dim=0)
+        pixel_values = torch.cat(pixel_values_list, dim=0).to(MODEL_DTYPE).to(self.model.device)
 
         num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in batch_titles_per_doc])
 
