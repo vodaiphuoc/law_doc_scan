@@ -12,11 +12,11 @@ MODEL_DTYPE = torch.bfloat16
 
 class ModelWrapper(object):
 
-    example_inst = "Dưới đây là một số ví dụ:\n{example_details}"
+    example_inst = "Dưới đây là một số ví dụ bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
 
-    inst = "Nhiệm vụ của bạn trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}\n"
+    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
 
-    query = "Trích xuất thông tin trong văn bản sau:\n<image>\n"
+    query = "Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn bản"
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()

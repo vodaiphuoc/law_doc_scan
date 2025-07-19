@@ -5,7 +5,7 @@ from typing import Union, Tuple, Dict, List
 class ExampleModel(BaseModel):
     url: HttpUrl
     question: str = Field(
-        default="Trích xuất thông tin trong văn bản sau:\n<image>\n"
+        default="<image>\nTrích xuất thông tin trong văn bản sau:\n"
     )
     answer: str
 
