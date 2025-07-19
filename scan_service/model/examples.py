@@ -26,7 +26,7 @@ class Examples(BaseModel):
     "Số  hiệu văn bản": "331",
     "Ký hiệu văn bản": "QĐ/TW",
     "Thể loại văn bản": "QUYẾT ĐỊNH",
-    "Tên người ký ở cuối văn bản": "Trần Cẩm Tú"
+    "Tên người ký": "Trần Cẩm Tú"
 }
 ```
 """

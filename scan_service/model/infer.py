@@ -24,7 +24,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
 **Ký hiệu văn bản**
 **Thể loại văn bản**
 **Tóm tắt văn bản**
-**Tên người ký ở cuối văn bản**
+**Tên người ký**
 """
 
     def __init__(self, config:  ModelConfig):
@@ -32,7 +32,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         self.config = config
         self.model = AutoModel.from_pretrained(
             config.model_id,
-            # load_in_8bit=True,
+            load_in_8bit=True,
             torch_dtype = MODEL_DTYPE,
             trust_remote_code = True,
             use_flash_attn = can_use_flash_attn,
@@ -54,16 +54,21 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         self.default_num_patches_list = []
         if config.fewshotconfig.build_examples:    
             example_details = ""
+
+            # loop over each example
             for _ith, _exp in \
                 enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
                 
-                _pixel_values = self.pre_process.transform(
-                    pdf2images(_exp.url.encoded_string(), is_remote_path = True)[0]
-                    ).to(MODEL_DTYPE).to(self.model.device)
-                self.default_pixel_values_list.append(_pixel_values)
-                self.default_num_patches_list.append(_pixel_values.shape[0])
+                _batch_titles_per_doc = self.pre_process.transform(
+                    pdf2images(_exp.url.encoded_string(), is_remote_path = True)
+                    )
+                
+                self.default_pixel_values_list.extend(_batch_titles_per_doc)
+                self.default_num_patches_list.append([_batch_titles.shape[0] for _batch_titles in _batch_titles_per_doc])
 
-                example_details += f"Ví dụ {_ith}:\n" + _exp.tostring
+                # modeling <image> respect to number of pages of each example's doc
+                _multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(_batch_titles_per_doc))])
+                example_details += f"Ví dụ {_ith}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
             
             self.question = self.inst.format(
                 example_content = self.example_inst.format(example_details = example_details)
