@@ -11,7 +11,7 @@ class ExampleModel(BaseModel):
 
     @computed_field
     @property
-    def tostring(self):
+    def tostring(self)->str:
         return f"Câu hỏi: {self.question}\nTrả lời: {self.answer}\n"
 
 class Examples(BaseModel):
