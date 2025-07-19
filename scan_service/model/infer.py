@@ -101,6 +101,11 @@ class ModelWrapper(object):
 
         num_patches_list.append(batch_titles.shape[0])
 
+
+        print('debugging: ')
+        print('question: ', question)
+        print('num_patches_list: ', num_patches_list)
+
         response = self.model.chat(
             tokenizer = self.tokenizer, 
             pixel_values = pixel_values,
