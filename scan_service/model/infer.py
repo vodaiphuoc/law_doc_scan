@@ -16,7 +16,15 @@ class ModelWrapper(object):
 
     inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
 
-    query = "Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn bản"
+    query = """
+Bây giờ, với hình ảnh: <image>\n, trích xuất thông tin trong văn bản
+- đầu ra theo format JSON được mô tả sau đây:
+**Cơ quan ban hành văn bản**
+**Số  hiệu văn bản**
+**Ký hiệu văn bản**
+**Thể loại văn bản**
+**Tên người ký ở cuối văn bản**
+"""
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
