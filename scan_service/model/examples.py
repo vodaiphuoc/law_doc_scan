@@ -1,9 +1,9 @@
 # Example modeling for fewshot example
-from pydantic import BaseModel, Field, FileUrl, computed_field
+from pydantic import BaseModel, Field, FileUrl, computed_field, HttpUrl
 from typing import Union, Tuple, Dict, List
 
 class ExampleModel(BaseModel):
-    url: FileUrl
+    url: HttpUrl
     question: str = Field(
         default="Trích xuất thông tin trong văn bản sau:\n<image>\n"
     )
