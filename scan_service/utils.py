@@ -29,7 +29,13 @@ def pdf2images(img_path:str, is_remote_path: bool = False)->List[Image.Image]:
         is_remote_path (bool): local or remote path
     """
     if is_remote_path:
-        response_data = requests.get(img_path)
+        response_data = requests.get(
+            url = img_path,    
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "User-Agent":"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
+            })
+
         doc = pymupdf.Document(stream=response_data.content)
     else:
         doc = pymupdf.open(img_path)
