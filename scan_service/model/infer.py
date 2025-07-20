@@ -8,7 +8,7 @@ from model.examples import Examples
 from commons.schemas.model import Fields2Extract
 
 
-MODEL_DTYPE = torch.bfloat16
+MODEL_DTYPE = torch.float16
 
 class ModelWrapper(object):
 
@@ -32,8 +32,8 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         self.config = config
         self.model = AutoModel.from_pretrained(
             config.model_id,
-            # torch_dtype = MODEL_DTYPE,
-            torch_dtype="auto",
+            torch_dtype = MODEL_DTYPE,
+            # torch_dtype="auto",
             trust_remote_code = True,
             # use_flash_attn = can_use_flash_attn,
             revision="main",
@@ -124,7 +124,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
 
         # process pixcel values
         pixel_values_list.extend(batch_titles_per_doc)
-        pixel_values = torch.cat(pixel_values_list, dim=0).to(self.model.dtype).to(self.model.device)
+        pixel_values = torch.cat(pixel_values_list, dim=0).to(MODEL_DTYPE).to(self.model.device)
 
         # process num_patches_list
         num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in batch_titles_per_doc])
