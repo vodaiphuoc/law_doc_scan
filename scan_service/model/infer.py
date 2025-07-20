@@ -1,4 +1,4 @@
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
 import torch
 
 from configs.model import ModelConfig
@@ -32,11 +32,13 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         self.config = config
         self.model = AutoModel.from_pretrained(
             config.model_id,
-            load_in_8bit=True,
-            torch_dtype = MODEL_DTYPE,
+            # torch_dtype = MODEL_DTYPE,
+            torch_dtype="auto",
             trust_remote_code = True,
-            use_flash_attn = can_use_flash_attn,
+            # use_flash_attn = can_use_flash_attn,
             revision="main",
+            device_map="auto",
+            quantization_config=BitsAndBytesConfig(load_in_8bit=True)
         ).eval()
 
         self.tokenizer = AutoTokenizer.from_pretrained(
