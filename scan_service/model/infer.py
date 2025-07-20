@@ -38,7 +38,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
             # use_flash_attn = can_use_flash_attn,
             revision="main",
             device_map="auto",
-            quantization_config=BitsAndBytesConfig(load_in_8bit=True)
+            # quantization_config=BitsAndBytesConfig(load_in_8bit=True)
         ).eval()
 
         self.tokenizer = AutoTokenizer.from_pretrained(
