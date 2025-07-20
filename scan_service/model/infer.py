@@ -136,7 +136,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         print('debugging: ')
         print('question: ', question)
         print('num_patches_list: ', num_patches_list)
-        print('pixel_values: ', pixel_values.shape)
+        print('pixel_values: ', pixel_values.shape, pixel_values.dtype)
 
         response = self.model.chat(
             tokenizer = self.tokenizer, 
