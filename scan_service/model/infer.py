@@ -46,6 +46,8 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
             revision="main"
         )
 
+        print('model device: ', self.model.device)
+
         self.pre_process = Image_PreProcessing(config = config)
 
         self._generation_config = config.generation_config
@@ -59,16 +61,17 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
             for _ith, _exp in \
                 enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
                 
-                _batch_titles_per_doc = self.pre_process.transform(
-                    pdf2images(_exp.url.encoded_string(), is_remote_path = True)
-                    )
+                pages_images = pdf2images(_exp.url.encoded_string(), is_remote_path = True)
+                print('example: {_ith}: ',len(pages_images),'pages')
+                _batch_titles_per_doc = self.pre_process.transform(pages_images)
+                assert len(pages_images) == len(_batch_titles_per_doc)
                 
                 self.default_pixel_values_list.extend(_batch_titles_per_doc)
-                self.default_num_patches_list.append([_batch_titles.shape[0] for _batch_titles in _batch_titles_per_doc])
+                self.default_num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in _batch_titles_per_doc])
 
                 # modeling <image> respect to number of pages of each example's doc
-                _multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(_batch_titles_per_doc))])
-                example_details += f"Ví dụ {_ith}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
+                _multi_pages_image_token = "".join([f"\nTrang {_ith + 1}: <image>\n" for _ith in range(len(_batch_titles_per_doc))])
+                example_details += f"Ví dụ {_ith + 1}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
             
             self.question = self.inst.format(
                 example_content = self.example_inst.format(example_details = example_details)
@@ -124,6 +127,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
         print('debugging: ')
         print('question: ', question)
         print('num_patches_list: ', num_patches_list)
+        print('pixel_values: ', pixel_values.shape)
 
         response = self.model.chat(
             tokenizer = self.tokenizer, 
