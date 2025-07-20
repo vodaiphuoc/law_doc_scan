@@ -18,7 +18,7 @@ class ModelWrapper(object):
 
     query = """
 Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
-- đầu ra theo format JSON được mô tả sau đây:
+đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
 **Số  hiệu văn bản**
 **Ký hiệu văn bản**
@@ -62,7 +62,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
                 enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
                 
                 pages_images = pdf2images(_exp.url.encoded_string(), is_remote_path = True)
-                print('example: {_ith}: ',len(pages_images),'pages')
+                print(f'example: {_ith}: ',len(pages_images),'pages')
                 _batch_titles_per_doc = self.pre_process.transform(pages_images)
                 assert len(pages_images) == len(_batch_titles_per_doc)
                 
@@ -107,22 +107,29 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
 
         assert len(batch_titles_per_doc) == len(pages_images)
 
+        # intitalize for current doc request
         pixel_values_list = []
         num_patches_list = []
-        if self.config.fewshotconfig.build_examples:
-            question = self.question + self.query
+        question = ""
 
+        # incase fewshot
+        if self.config.fewshotconfig.build_examples:
+            
             pixel_values_list.extend(self.default_pixel_values_list)
             num_patches_list.extend(self.default_num_patches_list)
-            
-        else:
-            multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(batch_titles_per_doc))])
-            question = self.query.replace('<image>',multi_pages_image_token)
 
+            question += self.question
+
+        # process pixcel values
         pixel_values_list.extend(batch_titles_per_doc)
         pixel_values = torch.cat(pixel_values_list, dim=0).to(MODEL_DTYPE).to(self.model.device)
 
+        # process num_patches_list
         num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in batch_titles_per_doc])
+
+        # process question
+        multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(batch_titles_per_doc))])
+        question += self.query.replace('<image>',multi_pages_image_token)
 
         print('debugging: ')
         print('question: ', question)
