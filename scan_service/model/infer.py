@@ -165,7 +165,8 @@ Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn b
 {
     **Cơ quan ban hành văn bản**
     **Số  hiệu văn bản**
-    **Tóm tắt văn bản**
+    **Thể loại văn bản**
+    **Tiêu đề  văn bản**
     **Tên người ký**
 }
 
