@@ -167,6 +167,7 @@ Bây giờ, với văn bản chính sau:\n<image>\n, **trích xuất thông tin 
     **Tóm tắt văn bản**
     **Tên người ký**
 - thông tin trích xuất phải bằng ngôn ngữ tiếng việt.
+- chỉ cần tóm tắt một vài ý chính trong **Tóm tắt văn bản**
 """
 
     def __init__(self, config:  ModelConfig):
