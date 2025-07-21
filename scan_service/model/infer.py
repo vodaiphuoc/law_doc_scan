@@ -262,7 +262,7 @@ Lưu ý:
         _prompts: LMDEPLOY_PROMPTS_TYPE = [(question, pixel_images_list)]
         response = self._engine(
             _prompts, 
-            # gen_config = self._gen_config
+            gen_config = self._gen_config
         )
 
         print('response: ',response)
