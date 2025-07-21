@@ -6,7 +6,7 @@ class FewShotConfig(BaseModel):
     Config for few shot examples
     """
     build_examples:bool = Field(
-        default = True,
+        default = False,
         description="wether or not build few-shot examples"   
     )
 
