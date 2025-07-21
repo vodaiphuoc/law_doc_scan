@@ -26,7 +26,7 @@ class GenerationConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     model_id:str = Field(
-        default="OpenGVLab/InternVL3-8B-Instruct",
+        default="OpenGVLab/InternVL3-1B-Instruct",
         # default="OpenGVLab/InternVL3-1B",
         # default = "5CD-AI/Vintern-1B-v3_5",
         description="repo id on huggingface"
