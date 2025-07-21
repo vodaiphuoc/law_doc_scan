@@ -21,7 +21,7 @@ class GenerationConfig(BaseModel):
     # top_k: int = 64
     # top_p: float = 0.95
     max_new_tokens: int = 1024 
-    do_sample: bool  = True
+    do_sample: bool  = False
     repetition_penalty:float = 2.0
 
 class ModelConfig(BaseModel):
