@@ -154,15 +154,15 @@ LMDEPLOY_PROMPTS_TYPE = List[Tuple[Union[str, List[Image.Image]]]]
 
 class ModelWrapper2(object):
 
-    example_inst = "Dưới đây là một số  **ví dụ** bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
+    example_inst = "Dưới đây là một số  **ví dụ** bao gồm câu hỏi, trả lời theo format JSON tương ứng:\n{example_details}"
 
     inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}.**Hết ví dụ**"
 
     query = """
-Bây giờ, với văn bản chính sau:\n<image>\n, trích xuất thông tin trong văn bản.
+Bây giờ, với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
 đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
-**Số ,ký hiệu văn bản**
+**Số  hiệu văn bản**
 **Thể loại văn bản**
 **Tóm tắt văn bản**
 **Tên người ký**
