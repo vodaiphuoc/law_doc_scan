@@ -164,10 +164,9 @@ Bây giờ, với văn bản chính sau:\n<image>\n, **trích xuất thông tin 
     **Cơ quan ban hành văn bản**
     **Số  hiệu văn bản**
     **Thể loại văn bản**
-    **Tóm tắt văn bản**
+    **Nội dung chinh**
     **Tên người ký**
 - thông tin trích xuất phải bằng ngôn ngữ tiếng việt.
-- chỉ cần tóm tắt một vài ý chính trong **Tóm tắt văn bản**
 """
 
     def __init__(self, config:  ModelConfig):
