@@ -168,6 +168,10 @@ Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn b
     **Tiêu đề văn bản**
     **Tên người ký**
 }
+
+Lưu ý:
+    - **Cơ quan ban hành văn bản** thường nằm phía trên **Số  hiệu văn bản**
+    - **Tên người ký** nằm phía góc dưới bên phải của  trang
 """
 
     def __init__(self, config:  ModelConfig):
