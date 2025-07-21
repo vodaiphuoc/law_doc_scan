@@ -18,15 +18,15 @@ class FewShotConfig(BaseModel):
 
 class GenerationConfig(BaseModel):
     temperature:float = 1.0
-    top_k: int = 50
-    top_p: float = 1.0
+    top_k: int = 64
+    top_p: float = 0.95
     max_new_tokens: int = 1024 
-    do_sample: bool  = False
-    repetition_penalty:float = 2.0
+    do_sample: bool  = True
+    # repetition_penalty:float = 2.0
 
 class ModelConfig(BaseModel):
     model_id:str = Field(
-        default="OpenGVLab/InternVL3-1B-Instruct",
+        default="google/gemma-3-4b-it",
         # default="OpenGVLab/InternVL3-1B",
         # default = "5CD-AI/Vintern-1B-v3_5",
         description="repo id on huggingface"

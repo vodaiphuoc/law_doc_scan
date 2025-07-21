@@ -165,14 +165,17 @@ Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn b
 {
     **Cơ quan ban hành văn bản**
     **Số  hiệu văn bản**
-    **Tiêu đề văn bản**
+    **Tóm tắt văn bản**
     **Tên người ký**
 }
 
 Lưu ý:
     - **Cơ quan ban hành văn bản** thường nằm phía trên **Số  hiệu văn bản**
-    - **Tên người ký** nằm phía góc dưới bên phải của  trang
+    - **Tên người ký** nằm phía góc dưới bên phải của trang
 """
+
+# Tiêu đề 
+# Tóm tắt
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
