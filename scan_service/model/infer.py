@@ -192,7 +192,7 @@ Lưu ý:
         self._engine = pipeline(
             config.model_id, 
             backend_config=TurbomindEngineConfig(
-                model_format = 'hf',
+                # model_format = 'hf',
                 session_len=16384, 
                 tp=1, 
                 quant_policy = 8,
