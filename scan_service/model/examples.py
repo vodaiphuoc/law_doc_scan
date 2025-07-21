@@ -5,7 +5,14 @@ from typing import Union, Tuple, Dict, List
 class ExampleModel(BaseModel):
     url: HttpUrl
     question: str = Field(
-        default="<image>\nTrích xuất thông tin trong văn bản sau:\n"
+        default="""<image>\n, trích xuất thông tin trong văn bản sau.
+đầu ra theo format JSON được mô tả sau đây:
+**Cơ quan ban hành văn bản**
+**Số ,ký hiệu văn bản**
+**Thể loại văn bản**
+**Tóm tắt văn bản**
+**Tên người ký**
+"""
     )
     answer: str
 

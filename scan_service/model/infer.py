@@ -154,12 +154,12 @@ LMDEPLOY_PROMPTS_TYPE = List[Tuple[Union[str, List[Image.Image]]]]
 
 class ModelWrapper2(object):
 
-    example_inst = "Dưới đây là một số ví dụ bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
+    example_inst = "Dưới đây là một số  **ví dụ** bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
 
-    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
+    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}.**Hết ví dụ**"
 
     query = """
-Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
+Bây giờ, với văn bản chính sau:\n<image>\n, trích xuất thông tin trong văn bản.
 đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
 **Số ,ký hiệu văn bản**
@@ -212,7 +212,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
                     f"\nTrang {_ith + 1}: {self._image_token}\n" 
                     for _ith in range(len(pages_images))
                 ])
-                example_details += f"Ví dụ {_ith + 1}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
+                example_details += f"**Ví dụ {_ith + 1}**:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
             
             self.question = self.inst.format(
                 example_content = self.example_inst.format(example_details = example_details)
