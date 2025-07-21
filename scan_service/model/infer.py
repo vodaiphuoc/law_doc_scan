@@ -6,7 +6,8 @@ from utils import get_device, pdf2images
 from model.preprocessing import Image_PreProcessing
 from model.examples import Examples
 from commons.schemas.model import Fields2Extract
-
+from typing import List, Tuple, Union
+from PIL import Image
 
 MODEL_DTYPE = torch.float16
 
@@ -145,5 +146,111 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
             num_patches_list = num_patches_list,
             generation_config = self._generation_config
         )
+
+        print('response: ',response)
+
+
+LMDEPLOY_PROMPTS_TYPE = List[Tuple[Union[str, List[Image.Image]]]]
+
+class ModelWrapper2(object):
+
+    example_inst = "Dưới đây là một số ví dụ bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
+
+    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
+
+    query = """
+Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
+đầu ra theo format JSON được mô tả sau đây:
+**Cơ quan ban hành văn bản**
+**Số  hiệu văn bản**
+**Ký hiệu văn bản**
+**Thể loại văn bản**
+**Tóm tắt văn bản**
+**Tên người ký**
+"""
+
+    def __init__(self, config:  ModelConfig):
+        self.device, can_use_flash_attn = get_device()
+        self.config = config
+
+        from lmdeploy import pipeline, TurbomindEngineConfig, ChatTemplateConfig
+        from lmdeploy import GenerationConfig as LD_GenerationConfig
+        from lmdeploy.vl import load_image
+        from lmdeploy.vl.constants import IMAGE_TOKEN
+
+        self._image_token = IMAGE_TOKEN
+
+        # will be instance of 'lmdeploy.serve.vl_async_engine.VLAsyncEngine'
+        self._engine = pipeline(
+            config.model_id, 
+            backend_config=TurbomindEngineConfig(
+                model_format = 'hf',
+                session_len=16384, 
+                tp=1, 
+                quant_policy = 8,
+                revision ='main'
+                ), 
+            chat_template_config=ChatTemplateConfig(model_name='internvl2_5'),
+        )
+
+        self._gen_config = LD_GenerationConfig(**config.generation_config)
+
+        self.default_images_list = []
+        if config.fewshotconfig.build_examples:    
+            example_details = ""
+
+            # loop over each example
+            for _ith, _exp in \
+                enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
+                
+                pages_images = pdf2images(_exp.url.encoded_string(), is_remote_path = True)
+                print(f'example: {_ith}: ',len(pages_images),'pages')
+                self.default_images_list.extend(pages_images)
+                
+
+                # modeling <image> respect to number of pages of each example's doc
+                _multi_pages_image_token = "".join([
+                    f"\nTrang {_ith + 1}: {self._image_token}\n" 
+                    for _ith in range(len(pages_images))
+                ])
+                example_details += f"Ví dụ {_ith + 1}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
+            
+            self.question = self.inst.format(
+                example_content = self.example_inst.format(example_details = example_details)
+            )
+            
+        else:
+            self.question = ""
+
+    def forward(self, local_path_pdf:str):
+        r"""
+        Example
+        response = pipe((f'Image-1: {IMAGE_TOKEN}\nImage-2: {IMAGE_TOKEN}\ndescribe these two images', images))
+        """
+        pages_images = pdf2images(local_path_pdf)
+        print('num pages: ', len(pages_images))
+
+        # intitalize for current doc request
+        pixel_images_list = []
+        question = ""
+
+        # incase fewshot
+        if self.config.fewshotconfig.build_examples:
+            pixel_images_list.extend(self.default_images_list)
+
+            question += self.question
+
+        # process pixcel values
+        pixel_images_list.extend(pages_images)
+
+        # process question
+        multi_pages_image_token = "".join([f"Trang {_ith + 1}: {self._image_token}\n" for _ith in range(len(pages_images))])
+        question += self.query.replace('<image>',multi_pages_image_token)
+
+        print('debugging: ')
+        print('question: ', question)
+        
+        _prompts: LMDEPLOY_PROMPTS_TYPE = [(question, pixel_images_list)]
+        response = self._engine(_prompts, gen_config = self._gen_config)
 
         print('response: ',response)

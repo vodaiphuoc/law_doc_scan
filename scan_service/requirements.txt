@@ -4,3 +4,4 @@ torchvision
 PyMuPDF
 transformers
 bitsandbytes
+lmdeploy
