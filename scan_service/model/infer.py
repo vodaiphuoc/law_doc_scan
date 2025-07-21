@@ -159,13 +159,12 @@ class ModelWrapper2(object):
     inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}.**Hết ví dụ**"
 
     query = """
-Bây giờ, với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
+Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
 đầu ra theo format JSON được mô tả sau đây:
-    **Cơ quan ban hành văn bản**
-    **Số  hiệu văn bản**
-    **Thể loại văn bản**
-    **Tên người ký**
-- thông tin trích xuất phải bằng ngôn ngữ tiếng việt.
+**Cơ quan ban hành văn bản**
+**Số  hiệu văn bản**
+**Thể loại văn bản**
+**Tên người ký**
 """
 
     def __init__(self, config:  ModelConfig):
