@@ -167,7 +167,7 @@ class ModelWrapper2(object):
 # **Tên người ký**
 # """
     query = """
-Với văn bản chính sau:\n<image>\n, hãy trả lời các câu hỏi sau.
+Với văn bản chính sau:\n<image>\n, hãy trả lời các câu hỏi sau:
 1) Cơ quan ban hành văn bản?
 2) Số  hiệu văn bản?
 3) Thể loại văn bản?
@@ -257,6 +257,9 @@ Với văn bản chính sau:\n<image>\n, hãy trả lời các câu hỏi sau.
         print('pixel_images_list: ', len(pixel_images_list))
         
         _prompts: LMDEPLOY_PROMPTS_TYPE = [(question, pixel_images_list)]
-        response = self._engine(_prompts, gen_config = self._gen_config)
+        response = self._engine(
+            _prompts, 
+            # gen_config = self._gen_config
+        )
 
         print('response: ',response)
