@@ -22,7 +22,6 @@ class GenerationConfig(BaseModel):
     top_p: float = 1.0
     max_new_tokens: int = 1024 
     do_sample: bool  = False
-    num_beams: int = 1
     repetition_penalty:float = 2.0
 
 class ModelConfig(BaseModel):
