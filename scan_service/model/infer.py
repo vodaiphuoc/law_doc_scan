@@ -161,18 +161,14 @@ class ModelWrapper2(object):
     query = """
 Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
 đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Tiêu đề văn bản**
-**Tên người ký**
+```json
+{
+    **Cơ quan ban hành văn bản**
+    **Số  hiệu văn bản**
+    **Tiêu đề văn bản**
+    **Tên người ký**
+}
 """
-#     query = """
-# Với văn bản chính sau:\n<image>\n, hãy trả lời các câu hỏi sau:
-# 1) Cơ quan ban hành văn bản?
-# 2) Số  hiệu văn bản?
-# 3) Tiêu đề văn bản?
-# 4) Tên người ký?
-# """
 
     def __init__(self, config:  ModelConfig):
         self.device, can_use_flash_attn = get_device()
