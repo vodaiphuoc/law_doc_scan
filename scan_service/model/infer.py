@@ -162,8 +162,7 @@ class ModelWrapper2(object):
 Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
 đầu ra theo format JSON được mô tả sau đây:
 **Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Ký hiệu văn bản**
+**Số ,ký hiệu văn bản**
 **Thể loại văn bản**
 **Tóm tắt văn bản**
 **Tên người ký**
@@ -249,6 +248,7 @@ Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn b�
 
         print('debugging: ')
         print('question: ', question)
+        print('pixel_images_list: ', len(pixel_images_list))
         
         _prompts: LMDEPLOY_PROMPTS_TYPE = [(question, pixel_images_list)]
         response = self._engine(_prompts, gen_config = self._gen_config)
