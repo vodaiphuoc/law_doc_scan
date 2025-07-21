@@ -161,11 +161,12 @@ class ModelWrapper2(object):
     query = """
 Bây giờ, với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
 đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Thể loại văn bản**
-**Tóm tắt văn bản**
-**Tên người ký**
+    **Cơ quan ban hành văn bản**
+    **Số  hiệu văn bản**
+    **Thể loại văn bản**
+    **Tóm tắt văn bản**
+    **Tên người ký**
+- thông tin trích xuất phải bằng ngôn ngữ tiếng việt.
 """
 
     def __init__(self, config:  ModelConfig):
