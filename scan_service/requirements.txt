@@ -1,6 +1,4 @@
 pydantic
 torch
-torchvision
 PyMuPDF
-transformers
-bitsandbytes
+loguru

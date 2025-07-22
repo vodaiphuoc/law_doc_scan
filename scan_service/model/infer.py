@@ -1,162 +1,224 @@
-from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
-import torch
+from commons.configs.model import ModelConfig
+from commons.logger import get_logger
 
-from configs.model import ModelConfig
 from utils import get_device, pdf2images
-from model.preprocessing import Image_PreProcessing
-from model.examples import Examples
-from commons.schemas.model import Fields2Extract
-from typing import List, Tuple, Union
-from PIL import Image
+import json
+from typing import Any, Dict, Iterable, List, Optional, Union
+import requests
 
-MODEL_DTYPE = torch.float16
 
-class ModelWrapper(object):
+def get_model_list(api_url: str, headers: dict = None):
+    """Get model list from api server."""
+    response = requests.get(api_url, headers=headers)
+    logger = get_logger('lmdeploy')
+    if not response.ok:
+        logger.error(f'Failed to get the model list: {api_url}'
+                     'returns {response.status_code}')
+        return None
+    elif not hasattr(response, 'text'):
+        logger.warning('Failed to get the model list.')
+        return None
+    else:
+        model_list = response.json()
+        model_list = model_list.pop('data', [])
+        return [item['id'] for item in model_list]
 
-    example_inst = "Dưới đây là một số ví dụ bao gồm câu hỏi, trả lời tương ứng:\n{example_details}"
 
-    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}"
+def json_loads(content):
+    """Loads content to json format."""
+    try:
+        content = json.loads(content)
+        return content
+    except:  # noqa
+        logger = get_logger('lmdeploy')
+        logger.warning(f'weird json content {content}')
+        return ''
 
-    query = """
-Bây giờ, với văn bản:\n<image>\n, trích xuất thông tin trong văn bản
-đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số  hiệu văn bản**
-**Ký hiệu văn bản**
-**Thể loại văn bản**
-**Tóm tắt văn bản**
-**Tên người ký**
-"""
 
-    def __init__(self, config:  ModelConfig):
-        self.device, can_use_flash_attn = get_device()
-        self.config = config
-        self.model = AutoModel.from_pretrained(
-            config.model_id,
-            torch_dtype = MODEL_DTYPE,
-            # torch_dtype="auto",
-            trust_remote_code = True,
-            # use_flash_attn = can_use_flash_attn,
-            revision="main",
-            device_map="auto",
-            quantization_config=BitsAndBytesConfig(load_in_8bit=True)
-        ).eval()
+class _APIClient:
+    """Chatbot for LLaMA series models with turbomind as inference engine.
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            config.model_id,
-            trust_remote_code=True,
-            use_fast=False,
-            revision="main"
-        )
+    Args:
+        api_server_url (str): communicating address 'http://<ip>:<port>' of
+            api_server
+        api_key (str | None): api key. Default to None, which means no
+            api key will be used.
+    """
 
-        print('model device: ', self.model.device)
+    def __init__(self, api_server_url: str, api_key: Optional[str] = None):
+        self.api_server_url = api_server_url
 
-        self.pre_process = Image_PreProcessing(config = config)
+        self.chat_completions_v1_url = f'{api_server_url}/v1/chat/completions'
+        self.completions_v1_url = f'{api_server_url}/v1/completions'
+        self.models_v1_url = f'{api_server_url}/v1/models'
+        
+        self._available_models = None
+        self.api_key = api_key
+        self.headers = {'content-type': 'application/json'}
+        if api_key is not None:
+            self.headers['Authorization'] = f'Bearer {api_key}'
 
-        self._generation_config = config.generation_config
+    @property
+    def available_models(self):
+        """Show available models."""
+        if self._available_models is not None:
+            return self._available_models
+        self._available_models = get_model_list(self.models_v1_url, headers=self.headers)
+        return self._available_models
 
-        self.default_pixel_values_list = []
-        self.default_num_patches_list = []
-        if config.fewshotconfig.build_examples:    
-            example_details = ""
+    def chat_completions_v1(self,
+                            model: str,
+                            messages: Union[str, List[Dict[str, str]]],
+                            temperature: Optional[float] = 0.7,
+                            top_p: Optional[float] = 1.0,
+                            logprobs: Optional[bool] = False,
+                            top_logprobs: Optional[int] = 0,
+                            n: Optional[int] = 1,
+                            max_tokens: Optional[int] = None,
+                            stop: Optional[Union[str, List[str]]] = None,
+                            stream: Optional[bool] = False,
+                            presence_penalty: Optional[float] = 0.0,
+                            frequency_penalty: Optional[float] = 0.0,
+                            user: Optional[str] = None,
+                            repetition_penalty: Optional[float] = 1.0,
+                            ignore_eos: Optional[bool] = False,
+                            skip_special_tokens: Optional[bool] = True,
+                            spaces_between_special_tokens: Optional[bool] = True,
+                            top_k: int = 40,
+                            min_new_tokens: Optional[int] = None,
+                            min_p: float = 0.0,
+                            logit_bias: Optional[Dict[str, float]] = None,
+                            stream_options: Optional[Dict] = None,
+                            **kwargs):
+        """Chat completion v1.
 
-            # loop over each example
-            for _ith, _exp in \
-                enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
-                
-                pages_images = pdf2images(_exp.url.encoded_string(), is_remote_path = True)
-                print(f'example: {_ith}: ',len(pages_images),'pages')
-                _batch_titles_per_doc = self.pre_process.transform(pages_images)
-                assert len(pages_images) == len(_batch_titles_per_doc)
-                
-                self.default_pixel_values_list.extend(_batch_titles_per_doc)
-                self.default_num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in _batch_titles_per_doc])
+        Args:
+            model: model name. Available from self.available_models.
+            messages: string prompt or chat history in OpenAI format. Chat
+                history example: `[{"role": "user", "content": "hi"}]`.
+            temperature (float): to modulate the next token probability
+            top_p (float): If set to float < 1, only the smallest set of most
+                probable tokens with probabilities that add up to top_p or
+                higher are kept for generation.
+            n (int): How many chat completion choices to generate for each
+                input message. Only support one here.
+            stream: whether to stream the results or not. Default to false.
+            max_tokens (int | None): output token nums. Default to None.
+            stop (str | List[str] | None): To stop generating further
+              tokens. Only accept stop words that's encoded to one token idex.
+            repetition_penalty (float): The parameter for repetition penalty.
+                1.0 means no penalty
+            ignore_eos (bool): indicator for ignoring eos
+            skip_special_tokens (bool): Whether or not to remove special tokens
+                in the decoding. Default to be True.
+            spaces_between_special_tokens (bool): Whether or not to add spaces
+                around special tokens. The behavior of Fast tokenizers is to have
+                this to False. This is setup to True in slow tokenizers.
+            top_k (int): The number of the highest probability vocabulary
+                tokens to keep for top-k-filtering
+            min_new_tokens (int): To generate at least numbers of tokens.
+            min_p (float): Minimum token probability, which will be scaled by the
+                probability of the most likely token. It must be a value between
+                0 and 1. Typical values are in the 0.01-0.2 range, comparably
+                selective as setting `top_p` in the 0.99-0.8 range (use the
+                opposite of normal `top_p` values)
+            logit_bias (Dict): Bias to logits. Only supported in pytorch engine.
+            stream_options: Options for streaming response. Only set this when you
+                set stream: true.
 
-                # modeling <image> respect to number of pages of each example's doc
-                _multi_pages_image_token = "".join([f"\nTrang {_ith + 1}: <image>\n" for _ith in range(len(_batch_titles_per_doc))])
-                example_details += f"Ví dụ {_ith + 1}:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
-            
-            self.question = self.inst.format(
-                example_content = self.example_inst.format(example_details = example_details)
-            )
-            
-        else:
-            self.question = ""
-
-    def forward(self, local_path_pdf:str):
-        r"""
-        <https://huggingface.co/OpenGVLab/InternVL-Chat-V1-5>
-        # multi-image multi-round conversation, separate images (多图多轮对话，独立图像)
-        pixel_values1 = load_image('./examples/image1.jpg', max_num=12).to(torch.bfloat16).cuda()
-        pixel_values2 = load_image('./examples/image2.jpg', max_num=12).to(torch.bfloat16).cuda()
-        pixel_values = torch.cat((pixel_values1, pixel_values2), dim=0)
-        num_patches_list = [pixel_values1.size(0), pixel_values2.size(0)]
-
-        question = 'Image-1: <image>\nImage-2: <image>\nDescribe the two images in detail.'
-        response, history = model.chat(tokenizer, pixel_values, question, generation_config,
-                                    num_patches_list=num_patches_list,
-                                    history=None, return_history=True)
-        print(f'User: {question}\nAssistant: {response}')
-
-        question = 'What are the similarities and differences between these two images.'
-        response, history = model.chat(tokenizer, pixel_values, question, generation_config,
-                                    num_patches_list=num_patches_list,
-                                    history=history, return_history=True)
-        print(f'User: {question}\nAssistant: {response}')
+        Yields:
+            json objects in openai formats
         """
-        pages_images = pdf2images(local_path_pdf)
-        print('num pages: ', len(pages_images))
-        batch_titles_per_doc = self.pre_process.transform(pages_images)
+        pload = {k: v for k, v in locals().copy().items() if k[:2] != '__' and k not in ['self']}
+        response = requests.post(self.chat_completions_v1_url, headers=self.headers, json=pload, stream=stream)
+        for chunk in response.iter_lines(chunk_size=8192, decode_unicode=False, delimiter=b'\n'):
+            if chunk:
+                if stream:
+                    decoded = chunk.decode('utf-8')
+                    if decoded == 'data: [DONE]':
+                        continue
+                    if decoded[:6] == 'data: ':
+                        decoded = decoded[6:]
+                    output = json_loads(decoded)
+                    yield output
+                else:
+                    decoded = chunk.decode('utf-8')
+                    output = json_loads(decoded)
+                    yield output
 
-        assert len(batch_titles_per_doc) == len(pages_images)
+    def completions_v1(
+            self,
+            model: str,
+            prompt: Union[str, List[Any]],
+            suffix: Optional[str] = None,
+            temperature: Optional[float] = 0.7,
+            n: Optional[int] = 1,
+            max_tokens: Optional[int] = 16,
+            stream: Optional[bool] = False,
+            stop: Optional[Union[str, List[str]]] = None,
+            top_p: Optional[float] = 1.0,
+            top_k: Optional[int] = 40,
+            user: Optional[str] = None,
+            # additional argument of lmdeploy
+            repetition_penalty: Optional[float] = 1.0,
+            ignore_eos: Optional[bool] = False,
+            skip_special_tokens: Optional[bool] = True,
+            spaces_between_special_tokens: Optional[bool] = True,
+            stream_options: Optional[Dict] = None,
+            **kwargs):
+        """Chat completion v1.
 
-        # intitalize for current doc request
-        pixel_values_list = []
-        num_patches_list = []
-        question = ""
+        Args:
+            model (str): model name. Available from /v1/models.
+            prompt (str): the input prompt.
+            suffix (str): The suffix that comes after a completion of inserted
+                text.
+            max_tokens (int): output token nums
+            temperature (float): to modulate the next token probability
+            top_p (float): If set to float < 1, only the smallest set of most
+                probable tokens with probabilities that add up to top_p or
+                higher are kept for generation.
+            top_k (int): The number of the highest probability vocabulary
+                tokens to keep for top-k-filtering
+            n (int): How many chat completion choices to generate for each
+                input message. Only support one here.
+            stream: whether to stream the results or not. Default to false.
+            stop (str | List[str] | None): To stop generating further
+              tokens. Only accept stop words that's encoded to one token idex.
+            repetition_penalty (float): The parameter for repetition penalty.
+                1.0 means no penalty
+            user (str): A unique identifier representing your end-user.
+            ignore_eos (bool): indicator for ignoring eos
+            skip_special_tokens (bool): Whether or not to remove special tokens
+                in the decoding. Default to be True.
+            spaces_between_special_tokens (bool): Whether or not to add spaces
+                around special tokens. The behavior of Fast tokenizers is to have
+                this to False. This is setup to True in slow tokenizers.
+            stream_options: Options for streaming response. Only set this when you
+                set stream: true.
 
-        # incase fewshot
-        if self.config.fewshotconfig.build_examples:
-            
-            pixel_values_list.extend(self.default_pixel_values_list)
-            num_patches_list.extend(self.default_num_patches_list)
-
-            question += self.question
-
-        # process pixcel values
-        pixel_values_list.extend(batch_titles_per_doc)
-        pixel_values = torch.cat(pixel_values_list, dim=0).to(MODEL_DTYPE).to(self.model.device)
-
-        # process num_patches_list
-        num_patches_list.extend([_batch_titles.shape[0] for _batch_titles in batch_titles_per_doc])
-
-        # process question
-        multi_pages_image_token = "".join([f"Trang {_ith + 1}: <image>\n" for _ith in range(len(batch_titles_per_doc))])
-        question += self.query.replace('<image>',multi_pages_image_token)
-
-        print('debugging: ')
-        print('question: ', question)
-        print('num_patches_list: ', num_patches_list)
-        print('pixel_values: ', pixel_values.shape, pixel_values.dtype)
-
-        response = self.model.chat(
-            tokenizer = self.tokenizer, 
-            pixel_values = pixel_values,
-            question = question,
-            num_patches_list = num_patches_list,
-            generation_config = self._generation_config
-        )
-
-        print('response: ',response)
+        Yields:
+            json objects in openai formats
+        """
+        pload = {k: v for k, v in locals().copy().items() if k[:2] != '__' and k not in ['self']}
+        response = requests.post(self.completions_v1_url, headers=self.headers, json=pload, stream=stream)
+        for chunk in response.iter_lines(chunk_size=8192, decode_unicode=False, delimiter=b'\n'):
+            if chunk:
+                if stream:
+                    decoded = chunk.decode('utf-8')
+                    if decoded == 'data: [DONE]':
+                        continue
+                    if decoded[:6] == 'data: ':
+                        decoded = decoded[6:]
+                    output = json_loads(decoded)
+                    yield output
+                else:
+                    decoded = chunk.decode('utf-8')
+                    output = json_loads(decoded)
+                    yield output
 
 
-LMDEPLOY_PROMPTS_TYPE = List[Tuple[Union[str, List[Image.Image]]]]
-
-class ModelWrapper2(object):
-
-    example_inst = "Dưới đây là một số  **ví dụ** bao gồm câu hỏi, trả lời theo format JSON tương ứng:\n{example_details}"
-
-    inst = "Nhiệm vụ của bạn là trích xuất thông tin trong văn bản luật được cung cấp.\n{example_content}.**Hết ví dụ**"
+class ModelWrapperClient(object):
 
     query = """
 Với văn bản chính sau:\n<image>\n, **trích xuất thông tin trong văn bản**.
@@ -175,95 +237,49 @@ Lưu ý:
     - **Tên người ký** nằm phía góc dưới bên phải của trang
 """
 
-# Tiêu đề 
-# Tóm tắt
 
     def __init__(self, config:  ModelConfig):
-        self.device, can_use_flash_attn = get_device()
+        self.client = _APIClient(
+            api_key= config.api_key,
+            api_server_url=config.modal_url
+        )
+        self._image_token = '<IMAGE_TOKEN>'
         self.config = config
 
-        from lmdeploy import pipeline, TurbomindEngineConfig, ChatTemplateConfig
-        from lmdeploy import GenerationConfig as LD_GenerationConfig
-        from lmdeploy.vl import load_image
-        from lmdeploy.vl.constants import IMAGE_TOKEN
-
-        self._image_token = IMAGE_TOKEN
-
-        # will be instance of 'lmdeploy.serve.vl_async_engine.VLAsyncEngine'
-        self._engine = pipeline(
-            config.model_id, 
-            backend_config=TurbomindEngineConfig(
-                # model_format = 'hf',
-                session_len=16384, 
-                tp=1, 
-                quant_policy = 8,
-                revision ='main'
-                ), 
-            chat_template_config=ChatTemplateConfig(model_name='internvl2_5'),
-        )
-
-        self._gen_config = LD_GenerationConfig(**config.generation_config)
-
-        self.default_images_list = []
-        if config.fewshotconfig.build_examples:    
-            example_details = ""
-
-            # loop over each example
-            for _ith, _exp in \
-                enumerate(Examples().example_list[:config.fewshotconfig.num_examples_to_use]):
-                
-                pages_images = pdf2images(_exp.url.encoded_string(), is_remote_path = True)
-                print(f'example: {_ith}: ',len(pages_images),'pages')
-                self.default_images_list.extend(pages_images)
-                
-
-                # modeling <image> respect to number of pages of each example's doc
-                _multi_pages_image_token = "".join([
-                    f"\nTrang {_ith + 1}: {self._image_token}\n" 
-                    for _ith in range(len(pages_images))
-                ])
-                example_details += f"**Ví dụ {_ith + 1}**:\n" + _exp.tostring.replace('<image>',_multi_pages_image_token)
-            
-            self.question = self.inst.format(
-                example_content = self.example_inst.format(example_details = example_details)
-            )
-            
-        else:
-            self.question = ""
-
     def forward(self, local_path_pdf:str):
-        r"""
-        Example
-        response = pipe((f'Image-1: {IMAGE_TOKEN}\nImage-2: {IMAGE_TOKEN}\ndescribe these two images', images))
-        """
-        pages_images = pdf2images(local_path_pdf)
+        pages_images = pdf2images(local_path_pdf, return_base64_image= True)
         print('num pages: ', len(pages_images))
 
-        # intitalize for current doc request
-        pixel_images_list = []
-        question = ""
-
-        # incase fewshot
-        if self.config.fewshotconfig.build_examples:
-            pixel_images_list.extend(self.default_images_list)
-
-            question += self.question
-
-        # process pixcel values
-        pixel_images_list.extend(pages_images)
-
         # process question
-        multi_pages_image_token = "".join([f"Trang {_ith + 1}: {self._image_token}\n" for _ith in range(len(pages_images))])
-        question += self.query.replace('<image>',multi_pages_image_token)
+        multi_pages_image_token = "".join([
+            f"Trang {_ith + 1}: {self._image_token}\n"
+            for _ith in range(len(pages_images))
+        ])
 
-        print('debugging: ')
-        print('question: ', question)
-        print('pixel_images_list: ', len(pixel_images_list))
+        # construct content field in standard format
+        request_content = [{
+            'type': 'text',
+            'text': self.query.replace('<image>',multi_pages_image_token),
+        }]
         
-        _prompts: LMDEPLOY_PROMPTS_TYPE = [(question, pixel_images_list)]
-        response = self._engine(
-            _prompts, 
-            gen_config = self._gen_config
-        )
+        request_content.extend([{
+                'type': 'image_url',
+                'image_url': {
+                    'url': f"data:image/png;base64,{_encoded_image}"
+                }
+            }
+            for _encoded_image in pages_images
+        ])
 
-        print('response: ',response)
+        for item in self.client.chat_completions_v1(
+            model=self.config.model_id,
+            messages=[{
+                'role':'user',
+                'content': request_content
+            }],
+            temperature= self.config.temperature,
+            # top_p=self.config.top_p,
+            # top_k=self.config.top_k
+        ):
+
+            print(item)

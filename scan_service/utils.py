@@ -1,9 +1,10 @@
 import torch
-from typing import Tuple, List
+from typing import Tuple, List, Union
 import pymupdf
 from PIL import Image
 import io
 import requests
+import base64
 
 def get_device()->Tuple[torch.device, bool]:
     """
@@ -18,15 +19,36 @@ def get_device()->Tuple[torch.device, bool]:
             return device, False
     else:
         return torch.device("cpu"), False
-    
+
+def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
+    """
+    Converts a PIL.Image object to a Base64 encoded string.
+
+    Args:
+        image: The PIL.Image object.
+        format: The format to save the image in (e.g., "PNG", "JPEG").
+
+    Returns:
+        A Base64 encoded string of the image.
+    """
+    buffered = io.BytesIO()
+    image.save(buffered, format=format)
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+
 ZOOM_MATRIX = pymupdf.Matrix(2.0, 2.0)
 
-def pdf2images(img_path:str, is_remote_path: bool = False)->List[Image.Image]:
+def pdf2images(
+        img_path:str, 
+        is_remote_path: bool = False,
+        return_base64_image:bool = False
+        )->Union[List[Image.Image],List[str]]:
     r"""
     Conver one PDF doc to list of page images
     Args:
         img_path (str):  path to the pdf file, for remote file, its a url
         is_remote_path (bool): local or remote path
+        return_base64_image (bool): wether or not return encode base64 string
     """
     if is_remote_path:
         response_data = requests.get(
@@ -48,4 +70,9 @@ def pdf2images(img_path:str, is_remote_path: bool = False)->List[Image.Image]:
         image = Image.open(io.BytesIO(img_data)).convert('RGB')
         images.append(image)
     
-    return images
+    if return_base64_image:
+        return [pil_image_to_base64(_img) for _img in images]
+    else:
+        return images
+
+

@@ -128,17 +128,23 @@
 import sys
 import os
 import argparse
+import asyncio
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from model.infer import ModelWrapper, ModelWrapper2
-from configs.model import ModelConfig
+from model.infer import ModelWrapperClient
+from commons.configs.model import ModelConfig
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--file_path")
-args = parser.parse_args()
+engine = ModelWrapperClient(config= ModelConfig())
 
-engine = ModelWrapper2(config= ModelConfig())
-engine.forward(local_path_pdf=args.file_path)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--file_path")
+    args = parser.parse_args()
+    engine.forward(local_path_pdf = args.file_path)
+    
