@@ -49,6 +49,6 @@ open *commons/configs/model.py*, at line 21, **PASTE** the url
 python scan_service/app.py --file_path QD-331-TW.pdf
 ```
 where *QD-331-TW.pdf* is a example file
-
+result will be available in terminal output
 #### WARNING
 - Fist time **run scan_service** may take time, due to vllm
