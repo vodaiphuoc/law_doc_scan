@@ -1,4 +1,8 @@
 pydantic
-torch
 PyMuPDF
 loguru
+aiohttp
+python-dotenv
+modal
+pillow
+requests

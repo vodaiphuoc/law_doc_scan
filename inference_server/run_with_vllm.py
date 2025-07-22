@@ -1,5 +1,4 @@
 import modal
-
 import os
 import sys
 
@@ -7,18 +6,24 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from commons.configs.model import ModelConfig
+from commons.configs.model import ModelConfigQuant
 
-model_config = ModelConfig()
+model_config = ModelConfigQuant()
 
 dockerfile_image = (
     modal.Image.debian_slim(python_version="3.10")
     .pip_install(
-        "lmdeploy",
+        "vllm==0.9.2",
         "huggingface_hub[hf_transfer]",
-        "timm"
+        "timm",
+        "python-dotenv"
     )
-    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})  # faster model transfers
+    .env({
+        "HF_HUB_ENABLE_HF_TRANSFER": "1",
+        # "HF_TOKEN": os.environ['HF_TOKEN'],
+        "VLLM_USE_V1": "1",
+        "VLLM_ATTENTION_BACKEND": "FLASH_ATTN"
+    })  # faster model transfers
     .add_local_dir("commons", remote_path= "/root/commons")
 )
 
@@ -34,7 +39,7 @@ MINUTES = 60  # seconds unit
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
     },
-    gpu=f"T4:{N_GPU}",
+    gpu=f"L4:{N_GPU}",
     scaledown_window=15 * MINUTES,
     timeout=10 * MINUTES,
 )
@@ -43,17 +48,15 @@ def serve():
     import subprocess
 
     cmd = [
-        "lmdeploy",
+        "vllm",
         "serve",
-        "api_server", model_config.model_id,
+        model_config.model_id,
+        "--task","generate",
         "--revision",model_config.model_revision,
-        "--backend",model_config.backend,
-        "--api-keys",model_config.api_key,
-        "--server-name",model_config.server_name,
-        "--server-port",str(model_config.server_port),
-        "--tp",str(model_config.tp),
-        "--session-len",str(model_config.session_len),
-        "--quant-policy",str(model_config.quant_policy)
+        "--api-key",model_config.api_key,
+        "--host",model_config.server_name,
+        "--port",str(model_config.server_port),
+        "--dtype","bfloat16"
     ]
 
     print(cmd)

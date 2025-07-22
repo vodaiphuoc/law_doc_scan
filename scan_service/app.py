@@ -135,16 +135,17 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from model.infer import ModelWrapperClient
-from commons.configs.model import ModelConfig
+from commons.configs.model import ModelConfigQuant
 
-engine = ModelWrapperClient(config= ModelConfig())
+engine = ModelWrapperClient(config= ModelConfigQuant())
 
-
+async def main(args):
+    await engine.forward(local_path_pdf = args.file_path)
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--file_path")
     args = parser.parse_args()
-    engine.forward(local_path_pdf = args.file_path)
     
+    asyncio.run(main(args))

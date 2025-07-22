@@ -1,4 +1,3 @@
-import torch
 from typing import Tuple, List, Union
 import pymupdf
 from PIL import Image
@@ -6,19 +5,6 @@ import io
 import requests
 import base64
 
-def get_device()->Tuple[torch.device, bool]:
-    """
-    Get device and able to use flash attention or not
-    """
-    if torch.cuda.is_available():
-        major, minor = torch.cuda.get_device_capability(device="cuda")
-        device = torch.device("cuda")
-        if major >= 7 and minor >= 5:
-            return device, True
-        else:
-            return device, False
-    else:
-        return torch.device("cpu"), False
 
 def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
     """
@@ -36,7 +22,7 @@ def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 
-ZOOM_MATRIX = pymupdf.Matrix(2.0, 2.0)
+ZOOM_MATRIX = pymupdf.Matrix(1.0, 1.0)
 
 def pdf2images(
         img_path:str, 
@@ -68,6 +54,7 @@ def pdf2images(
         pix = page.get_pixmap(matrix=ZOOM_MATRIX)
         img_data = pix.tobytes("ppm")
         image = Image.open(io.BytesIO(img_data)).convert('RGB')
+        print('image sizze:', image.size)
         images.append(image)
     
     if return_base64_image:
