@@ -140,6 +140,8 @@ from commons.configs.model import ModelConfigQuant
 engine = ModelWrapperClient(config= ModelConfigQuant())
 
 async def main(args):
+    await engine.health_check()
+
     await engine.forward(local_path_pdf = args.file_path)
 
 if __name__ == "__main__":

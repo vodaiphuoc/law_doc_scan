@@ -1,5 +1,17 @@
 from pydantic import BaseModel, Field
 from typing import Union, Tuple, Dict, List
+import json
+import shlex
+
+MAX_BATCH_SIZE = 2
+
+class CompilationConfig(BaseModel):
+    level:int = 3
+    splitting_ops:List[str]=["vllm.unified_attention","vllm.unified_attention_with_output"]
+    use_inductor:bool = True
+    use_cudagraph: bool = True
+    cudagraph_num_of_warmups:int = 1
+    cudagraph_capture_sizes: List[int] = list(range(1,MAX_BATCH_SIZE+1))
 
 class ModelConfigBase(BaseModel):
     """
@@ -10,7 +22,21 @@ class ModelConfigBase(BaseModel):
     server_name: str = '0.0.0.0'
     server_port: int = 23333
     tp:int = 1
-    session_len:int = 16384
+    max_model_len:int=Field(
+        default = 1024,
+        description= "Limit context window"
+    )
+    max_num_seqs:int=Field(
+        default = MAX_BATCH_SIZE,
+        description= "Limit batch size"
+    )
+    limit_mm_per_prompt: int = Field(
+        default = 3,
+        description= "Limit num image per request"
+    )
+
+    compilation_config: str = shlex.quote(json.dumps(CompilationConfig().model_dump(mode='json')))
+
     quant_policy:int = 8
     api_key:str = "123"
     temperature:float = 1.0
@@ -21,6 +47,10 @@ class ModelConfigBase(BaseModel):
         default = 'https://phuocvodn98--inference-server-internvl3-serve.modal.run',
         description= "url given by Modal.com, for testing only"
     )
+
+    def model_post_init(self, __context: any) -> None:
+        self.limit_mm_per_prompt = 'image='+str(self.limit_mm_per_prompt)
+
 
 class ModelConfigQuant(ModelConfigBase):
     """

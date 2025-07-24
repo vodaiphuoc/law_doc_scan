@@ -23,18 +23,14 @@ class SigningDay(BaseModel):
     )
 
 
-class Fields2Extract(BaseModel):
+class FieldsToExtract(BaseModel):
     issuing_agency: str = Field(
         description = "Cơ quan ban hành văn bản"
     )
 
-    document_number: int = Field(
-        description = "Số  hiệu văn bản"
-    )
-
-    doc_signature :str = Field(
-       description="Ký hiệu văn bản gồm nhóm chữ viết tắt của tên loại văn bản và tên cơ quan ban hành văn bản",
-       examples=["QĐ/BKTTW","HD/TU","CV/BTCTU","BC/HU","QĐ/TU","QC/BTCTU-BDVTU","TT-BTP"]
+    document_number_signature :str = Field(
+       description="Số  hiệu và ký hiệu văn bản gồm nhóm chữ viết tắt của tên loại văn bản và tên cơ quan ban hành văn bản",
+       examples=["123-QĐ/BKTTW","456-HD/TU","3569-CV/BTCTU","28492-BC/HU","3827-QĐ/TU","9274/TT-BTP"]
     )
 
     date_of_signing: SigningDay
@@ -45,7 +41,7 @@ class Fields2Extract(BaseModel):
     )
 
     summarization: str = Field(
-        description="Trích yếu nội dung trong văn bản"
+        description="tóm tắt trích yếu nội dung trong văn bản"
     )
 
     signing_person: str = Field(

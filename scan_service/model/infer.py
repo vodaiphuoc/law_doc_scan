@@ -1,4 +1,5 @@
 from commons.configs.model import ModelConfigQuant
+from commons.schemas.model import FieldsToExtract
 from commons.logger import get_logger
 
 from utils import pdf2images
@@ -9,27 +10,37 @@ import aiohttp
 class ModelWrapperClient(object):
     query = """
 Với văn bản chính sau, trích xuất thông tin trong văn bản.
-đầu ra theo format JSON được mô tả sau đây:
-```json
-{
-    **Cơ quan ban hành văn bản**
-    **Số  hiệu văn bản**
-    **Thể loại văn bản**
-    **Tiêu đề  văn bản**
-    **Tên người ký**
-}
 """
 
-    def __init__(self, config:  ModelConfigQuant):
+    def __init__(self, config: ModelConfigQuant):
         self.config = config
         self.headers = {
             'content-type': 'application/json',
             'Authorization': f'Bearer {config.api_key}'
         }
 
+        self._default_payload = {
+            "model": self.config.model_id,
+            "stream": False,
+            "temperature":self.config.temperature,
+            "top_p":self.config.top_p,
+            "top_k":self.config.top_k,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "fields-to-extract",
+                    "schema": FieldsToExtract.model_json_schema()
+                }
+            }
+        }
+
     async def forward(self, local_path_pdf:str):
-        pages_images = pdf2images(local_path_pdf, return_base64_image= True)[:1]
-        print('num pages: ', len(pages_images))
+        original_pages_images = pdf2images(local_path_pdf, return_base64_image= True)
+
+        # select pages in dedicated index
+        _num_pages = len(original_pages_images)
+        page_idx = [0,1, _num_pages-1] if _num_pages >= 3 else [0,_num_pages-1]
+        pages_images = list(map(original_pages_images.__getitem__, page_idx))
 
         # construct content field in standard format
         request_content = [{
@@ -46,25 +57,21 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
             for _encoded_image in pages_images
         ])
 
-        # construct payload with generation params
+        # construct payload and update with `self._default_payload`
         payload: dict[str, Any] = {
             "messages": [{
                 'role':'user',
                 'content': request_content
-            }], 
-            "model": self.config.model_id, 
-            "stream": False,
-            "temperature":self.config.temperature,
-            "top_p":self.config.top_p,
-            "top_k":self.config.top_k,
+            }]
         }
+        payload.update(self._default_payload)
 
         async with aiohttp.ClientSession(base_url=self.config.modal_url) as session:
             async with session.post(
                 "/v1/chat/completions", 
                 json=payload, 
                 headers=self.headers,
-                timeout=4*60
+                timeout=60
             ) as resp:
                 
                 async for raw in resp.content:
@@ -77,7 +84,18 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
                         line = line[len("data: ") :]
 
                     chunk = json.loads(line)
+                    print(chunk)
                     assert (
                         chunk["object"] == "chat.completion"
                     )  # or something went horribly wrong
                     print(chunk["choices"][0]["message"])
+
+    async def health_check(self):
+        async with aiohttp.ClientSession(base_url=self.config.modal_url) as session:
+            async with session.get(
+                "health",
+                headers=self.headers,
+                timeout=6*60
+            ) as resp:
+                async for raw in resp.content:
+                    print('health_check',raw)

@@ -1,29 +1,33 @@
 import modal
 import os
 import sys
+import json
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 from commons.configs.model import ModelConfigQuant
-
 model_config = ModelConfigQuant()
 
 dockerfile_image = (
-    modal.Image.debian_slim(python_version="3.10")
+    modal.Image.from_registry(
+        "nvidia/cuda:12.6.0-devel-ubuntu20.04",
+        add_python= "3.10"
+    )
     .pip_install(
-        "vllm==0.9.2",
         "huggingface_hub[hf_transfer]",
-        "timm",
+        # "timm",
         "python-dotenv"
+    )
+    .pip_install(
+        f"vllm==0.9.2",
+        extra_index_url=f"https://download.pytorch.org/whl/cu126"
     )
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
-        # "HF_TOKEN": os.environ['HF_TOKEN'],
-        "VLLM_USE_V1": "1",
         "VLLM_ATTENTION_BACKEND": "FLASH_ATTN"
-    })  # faster model transfers
+    })
     .add_local_dir("commons", remote_path= "/root/commons")
 )
 
@@ -56,10 +60,16 @@ def serve():
         "--api-key",model_config.api_key,
         "--host",model_config.server_name,
         "--port",str(model_config.server_port),
-        "--dtype","bfloat16"
+        "--dtype","bfloat16",
+        "--max-model-len",str(model_config.max_model_len),
+        "--max-num-seqs",str(model_config.max_num_seqs),
+        "--limit-mm-per-prompt",model_config.limit_mm_per_prompt,
+        "--compilation-config", model_config.compilation_config
     ]
 
-    print(cmd)
+    complete_cmd = " ".join(cmd)
 
-    subprocess.Popen(" ".join(cmd), shell=True)
+    print(complete_cmd)
+
+    subprocess.Popen(complete_cmd, shell=True)
 

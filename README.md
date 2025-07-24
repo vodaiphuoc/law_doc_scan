@@ -1,17 +1,14 @@
 #### Install env
-- create venv named `myenv`
+1) create venv named `myenv`
 ```bash
 python -m venv myenv
 ```
-- activate venv
-    - for Window
+2) activate venv
 ```bash
-myenv\Scripts\activate
+myenv\Scripts\activate    // for Window
+source myenv/bin/activate // for Linux
 ```
-- for Linux
-```bash
-source myenv/bin/activate
-```
+
 #### install dependencies
 ```bash
 pip install -r scan_service/requirements.txt
@@ -31,14 +28,11 @@ output from terminal may look like this:
 ```bash
  Created objects.
 ├── 🔨 Created mount 
-│   /home/vodaiphuoc/Projects/OCR_Thingy_dev/inference_server/run_with_vllm.py
-├── 🔨 Created mount /home/vodaiphuoc/Projects/OCR_Thingy_dev/commons
+│   ./inference_server/run_with_vllm.py
+├── 🔨 Created mount ./commons
 └── 🔨 Created web function serve => 
-    https://phuocvodn98--inference-server-internvl3-serve.modal.run
+    https://<account>--inference-server-internvl3-serve.modal.run
 ✓ App deployed in 3.831s! 🎉
-
-View Deployment: 
-https://modal.com/apps/phuocvodn98/main/deployed/Inference-server-internVL3
 ```
 next,
 **COPY** the url after 'Created web function serve =>'
@@ -52,3 +46,39 @@ where *QD-331-TW.pdf* is a example file
 result will be available in terminal output
 #### WARNING
 - Fist time **run scan_service** may take time, due to vllm
+
+#### Project structure
+```
+.
+├── commons/                    # shared package
+│   ├── configs
+│   │   └── model.py
+│   │   
+│   ├── schemas/
+│   │   ├── model.py
+│   │   └── api.py
+│   │   
+│   └── logger.py
+│
+├── inference_server/           # for host LLM model
+│   ├── Dockerfile
+│   └── run_with_vllm.py
+│
+├── scan_service/               # service worker
+│   ├── model/
+│   │   ├── examples.py
+│   │   └── infer.py
+│   │
+│   ├── utils.py
+│   ├── app.py
+│   ├── README.md
+│   └── requirements.txt
+│
+├── main_app/                   # main service
+|   ├── app.py
+│   ├── README.md
+│   └── requirements.txt
+|
+└── README.md
+```
+
