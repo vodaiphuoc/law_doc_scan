@@ -18,7 +18,6 @@ DOCUMENT_TASKS = Literal['cover_document','law_document']
 class ModelWrapperClient(object):
     cover_doc_inst = """
 nhiệm vụ chính nhận diện thông tin viết tay trong văn bản.
-Sau đây là một vài ví dụ:
 """
     cover_doc_query = """
 Với văn bản viết tay chính sau, hãy nhận diện thông tin trong văn bản.
@@ -26,7 +25,7 @@ Với văn bản viết tay chính sau, hãy nhận diện thông tin trong văn
     cover_doc_reponse_format = {
         "type": "json_schema",
         "json_schema": {
-            "name": "fields-to-extract",
+            "name": "Cover-Document-Extraction",
             "schema": CoverDocumentExtraction.model_json_schema()
         }
     }
@@ -37,7 +36,7 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
     law_doc_reponse_format = {
         "type": "json_schema",
         "json_schema": {
-            "name": "fields-to-extract",
+            "name": "Document-Details-Extraction",
             "schema": DocumentDetailsExtraction.model_json_schema()
         }
     }
@@ -65,25 +64,27 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
         self._law_payload["response_format"] = self.law_doc_reponse_format
 
         # build examples
-        self.example_contents = [{
-                'type': 'text',
-                'text': self.cover_doc_inst
+        self.example_msgs = [{
+            'role':'system',
+            'content': self.cover_doc_inst
         }]
+
         for _ith, exp in enumerate(Examples().example_list):
             _encoded_image = pdf2images(exp.path, return_base64_image= True)[0]
-            self.example_contents.extend([{
-                'type': 'text',
-                'text': f"\nVí dụ {_ith+1}:\nCâu hỏi: {exp.question}"
-            },
-            {
-                'type': 'image_url',
-                'image_url': {
-                    'url': f"data:image/png;base64,{_encoded_image}"
-                }
-            },
-            {
-                'type': 'text',
-                'text': f"Trả lời: {exp.answer}"
+            self.example_msgs.extend([{
+                'role':'user',
+                'content': [{
+                        'type': 'text',
+                        'text': f"\nVí dụ {_ith+1}:\nCâu hỏi: {exp.question}"
+                    },{
+                        'type': 'image_url',
+                        'image_url': {
+                            'url': f"data:image/png;base64,{_encoded_image}"
+                        }
+                    }]
+            },{
+                'role':'assistant',
+                'content': exp.answer
             }])
 
 
@@ -100,13 +101,10 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
 
         # construct content field in standard format
         if task == "cover_document":
-            request_content = []
-            # append examples
-            request_content.extend(self.example_contents)
-            request_content.append({
+            request_content = [{
                 'type': 'text',
                 'text': self.cover_doc_query
-            })
+            }]
 
         else:
             request_content = [{
@@ -124,16 +122,32 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
         ])
 
         # construct payload and update with `self._default_payload`
-        payload: dict[str, Any] = {
-            "messages": [{
+        if task == "cover_document":
+            msg = []
+            msg.extend(self.example_msgs)
+            msg.append({
                 'role':'user',
                 'content': request_content
-            }]
-        }
+            })
+            payload: dict[str, Any] = {
+                "messages": msg
+            }
+        else:
+            payload: dict[str, Any] = {
+                "messages": [{
+                    'role':'user',
+                    'content': request_content
+                }]
+            }
+        
         if task == "cover_document":
             payload.update(self._cover_payload)
         else:
             payload.update(self._law_payload)
+
+
+        # print(json.dumps(payload, indent = 4, ensure_ascii=False))
+
 
         async with aiohttp.ClientSession(base_url=self.config.modal_url) as session:
             async with session.post(
