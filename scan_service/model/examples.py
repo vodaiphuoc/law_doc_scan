@@ -1,18 +1,19 @@
 # Example modeling for fewshot example
-from pydantic import BaseModel, Field, FileUrl, computed_field, HttpUrl
+from pydantic import BaseModel, Field, computed_field
 from typing import Union, Tuple, Dict, List
+from commons.schemas.model import CoverDocumentExtraction
+import json
+import os
+
+EXAMPLE_DATA_DIR = os.path.dirname(__file__).replace("scan_service/model","example_data")
+
+# đầu ra theo format JSON được mô tả sau đây:
+# {json.dumps(CoverDocumentExtraction.model_json_schema(),ensure_ascii=False)}
 
 class ExampleModel(BaseModel):
-    url: HttpUrl
+    path: str
     question: str = Field(
-        default="""<image>\n, trích xuất thông tin trong văn bản sau.
-đầu ra theo format JSON được mô tả sau đây:
-**Cơ quan ban hành văn bản**
-**Số ,ký hiệu văn bản**
-**Thể loại văn bản**
-**Tóm tắt văn bản**
-**Tên người ký**
-"""
+        default=f"""Với văn bản viết tay, hãy nhận diện thông tin trong văn bản."""
     )
     answer: str
 
@@ -25,18 +26,22 @@ class Examples(BaseModel):
     example_list: List[ExampleModel] = Field(
         default=[
             ExampleModel(
-                url = "https://tulieuvankien.dangcongsan.vn/Uploads/2025/6/7/20/QD-331-TW.pdf",
+                path = os.path.join(EXAMPLE_DATA_DIR,"BIA.pdf"),
                 answer = """
 ```json
 {
-    "Cơ quan ban hành văn bản": "Ban Chấp hành Trung ương",
-    "Số  hiệu văn bản": "331-QĐ/TW",
-    "Thể loại văn bản": "QUYẾT ĐỊNH",
-    "Nội dung chinh": "Quyết định ban hành quy trình mẫu thực hiện kiểm tra, giám sát của các cơ quan tham mưu, giúp việc cấp ủy. Quyết định này nêu rõ trách nhiệm của các cơ quan Đảng và 
-đảng viên liên quan trong việc thực hiện quy trình này. Đồng thời, quyết định có hiệu lực từ ngày ký. Tài liệu được gửi đến các tỉnh ủy, 
-thành ủy, đảng ủy trực thuộc Trung ương, các ban Đảng Trung ương, các đảng ủy bộ, ngành, tổ chức chính trị - xã hội ở Trung ương, 
-các đảng ủy đơn vị sự nghiệp Trung ương, các đồng chí Ủy viên Ban Chấp hành Trung ương Đảng, và được lưu tại Văn phòng Trung ương Đảng.",
-    "Tên người ký": "Trần Cẩm Tú"
+    "main_content": "Hồ sơ: Biểu thống kê công tác Tuyên giáo năm 2017",
+    "start_day": {
+        "day": None,
+        "month": 12,
+        "year": 2017
+    },
+    "end_day": {
+        "day": None,
+        "month": 12,
+        "year": 2017
+    },
+    "storage_period": "V2"
 }
 ```
 """

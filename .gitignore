@@ -3,7 +3,6 @@ archives/
 frontend/
 __pycache__
 *.pdf
-!QD-331-TW.pdf
 _hf_cache
 test.py
 .env
