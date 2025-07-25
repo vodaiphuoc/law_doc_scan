@@ -6,3 +6,7 @@ python-dotenv
 modal
 pillow
 requests
+aio-pika
+fastapi
+uvicorn
+supabase
