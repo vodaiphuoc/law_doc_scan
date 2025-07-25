@@ -1,12 +1,13 @@
-from typing import Tuple, List, Union
+from typing import List, Union
 import pymupdf
+from pymupdf import Page, Document
 from PIL import Image
 import io
 import requests
 import base64
 
 
-def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
+def pil_image_to_base64(image: Image.Image, format:str="PNG") -> str:
     """
     Converts a PIL.Image object to a Base64 encoded string.
 
@@ -22,6 +23,7 @@ def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 
+# ZOOM_MATRIX = pymupdf.Matrix(1.3, 1.3)
 ZOOM_MATRIX = pymupdf.Matrix(1.0, 1.0)
 
 def pdf2images(
@@ -36,9 +38,11 @@ def pdf2images(
         is_remote_path (bool): local or remote path
         return_base64_image (bool): wether or not return encode base64 string
     """
+    doc: Document| None = None
+
     if is_remote_path:
         response_data = requests.get(
-            url = img_path,    
+            url = img_path,
             headers={
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "User-Agent":"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
@@ -47,15 +51,22 @@ def pdf2images(
         doc = pymupdf.Document(stream=response_data.content)
     else:
         doc = pymupdf.open(img_path)
-    images = []
+    
+    images: List[Image.Image] = []
+
     for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
+        page: Page = doc.load_page(page_id = page_num) # type: ignore
         # Render page to image with higher resolution
-        pix = page.get_pixmap(matrix=ZOOM_MATRIX)
-        img_data = pix.tobytes("ppm")
-        image = Image.open(io.BytesIO(img_data)).convert('RGB')
+        pix = page.get_pixmap(matrix=ZOOM_MATRIX) # type: ignore
+        img_data = pix.tobytes("ppm") # type: ignore
+        image = Image.open(io.BytesIO(img_data)).convert('RGB') # type: ignore
         print('image sizze:', image.size)
-        images.append(image)
+
+        W, H = image.size
+        if H > W:
+            images.append(image)
+        else:
+            continue
     
     if return_base64_image:
         return [pil_image_to_base64(_img) for _img in images]

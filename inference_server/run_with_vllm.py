@@ -64,7 +64,9 @@ def serve():
         "--max-model-len",str(model_config.max_model_len),
         "--max-num-seqs",str(model_config.max_num_seqs),
         "--limit-mm-per-prompt",model_config.limit_mm_per_prompt,
-        "--compilation-config", model_config.compilation_config
+        "--compilation-config", model_config.compilation_config,
+        "--trust-remote-code",
+        "--enforce-eager"
     ]
 
     complete_cmd = " ".join(cmd)

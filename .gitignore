@@ -1,4 +1,8 @@
 myenv/
+.mypy*
+typings/
+pyrightconfig.json
+
 archives/
 frontend/
 __pycache__

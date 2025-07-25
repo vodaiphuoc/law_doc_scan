@@ -1,5 +1,5 @@
 pydantic
-PyMuPDF
+pymupdf
 loguru
 aiohttp
 python-dotenv

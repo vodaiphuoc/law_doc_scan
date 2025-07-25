@@ -139,15 +139,15 @@ from commons.configs.model import ModelConfigQuant
 
 engine = ModelWrapperClient(config= ModelConfigQuant())
 
-async def main(args):
+async def main(args: argparse.Namespace):
 
     await engine.forward(local_path_pdf = args.file_path, task = args.task)
 
 if __name__ == "__main__":
-
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file_path")
-    parser.add_argument("--task")
+    parser.add_argument("--file_path", type=str)
+    parser.add_argument("--task",type=str)
     args = parser.parse_args()
     
     asyncio.run(main(args))

@@ -3,7 +3,7 @@ from typing import Union, Tuple, Dict, List
 import json
 import shlex
 
-MAX_BATCH_SIZE = 2
+MAX_BATCH_SIZE = 6
 
 class CompilationConfig(BaseModel):
     level:int = 3
@@ -20,10 +20,10 @@ class ModelConfigBase(BaseModel):
     model_id:str
     model_revision: str = "main"
     server_name: str = '0.0.0.0'
-    server_port: int = 23333
+    server_port: int = 8000
     tp:int = 1
     max_model_len:int=Field(
-        default = 1024,
+        default = 2048,
         description= "Limit context window"
     )
     max_num_seqs:int=Field(
@@ -31,7 +31,7 @@ class ModelConfigBase(BaseModel):
         description= "Limit batch size"
     )
     limit_mm_per_prompt: int = Field(
-        default = 3,
+        default = 6,
         description= "Limit num image per request"
     )
 
@@ -57,9 +57,11 @@ class ModelConfigQuant(ModelConfigBase):
     Main config for AWQ model
     """
     model_id:str = Field(
-        default="RedHatAI/gemma-3-4b-it-quantized.w4a16",
+        default="5CD-AI/Vintern-1B-v3_5",
         description="repo id on huggingface"
     )
-    temperature:float = 1.0
-    top_k:int= 64
-    top_p:float = 0.95
+    temperature:float = 0.01
+    top_k:int= 1
+    top_p:float = 0.1
+    min_p:float = 0.1
+    repetition_penalty:float= 1.1

@@ -1,117 +1,102 @@
 from commons.configs.model import ModelConfigQuant
-from commons.schemas.model import DocumentDetailsExtraction, CoverDocumentExtraction
+from commons.schemas.model import (
+    DocumentDetailsExtraction, 
+    CoverDocumentExtraction
+)
 from commons.logger import get_logger
-
-from .examples import Examples
-
 from utils import pdf2images
+
 import json
-from typing import Any, Literal
+from typing import Any, Literal, List, Dict,Type, cast
 import aiohttp
-from copy import deepcopy
+from pydantic import AliasChoices
+import re
 
-DOCUMENT_TASKS = Literal['cover_document','law_document']
+logger = get_logger("infer.py")
+
+DOCUMENT_TASKS = Literal['cover','law']
+SCHEMAS_TYPES = Type[DocumentDetailsExtraction]|Type[CoverDocumentExtraction]
+SINGLE_RESPONSE_TYPES = DocumentDetailsExtraction | CoverDocumentExtraction
+FINAL_RESPONSE_TYPES = List[DocumentDetailsExtraction|CoverDocumentExtraction]
 
 
-# print(json.dumps(CoverDocumentExtraction.model_json_schema(), ensure_ascii=False))
-# print('---------------------------------------')
-class ModelWrapperClient(object):
-    cover_doc_inst = """
-nhiệm vụ chính nhận diện thông tin viết tay trong văn bản.
-"""
-    cover_doc_query = """
+def _aliases2format(schemas:  SCHEMAS_TYPES)->str:
+    r"""
+    Conver aliases in `schemas` into JSON format
+    """
+    output = '```json\n{\n'
+    for _, v in schemas.model_fields.items():
+        _alias_choices: AliasChoices = cast(AliasChoices, v.validation_alias)
+        output+="    **"+cast(str,_alias_choices.choices[0])+"**\n"
+    output += '}```'
+    return output
+
+_COVER_DOC_TEMPATE = """
 Với văn bản viết tay chính sau, hãy nhận diện thông tin trong văn bản.
+đầu ra theo format được mô tả sau đây:
+{format_with_aliases}
 """
-    cover_doc_reponse_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "Cover-Document-Extraction",
-            "schema": CoverDocumentExtraction.model_json_schema()
-        }
-    }
 
-    law_doc_query = """
+COVER_DOC_QUERY = _COVER_DOC_TEMPATE.format(
+    format_with_aliases = _aliases2format(CoverDocumentExtraction)
+)
+
+
+_LAW_DOC_TEMPATE = """
 Với văn bản chính sau, trích xuất thông tin trong văn bản.
+đầu ra theo format được mô tả sau đây:
+{format_with_aliases}
 """
-    law_doc_reponse_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "Document-Details-Extraction",
-            "schema": DocumentDetailsExtraction.model_json_schema()
-        }
-    }
 
+LAW_DOC_QUERY = _LAW_DOC_TEMPATE.format(
+    format_with_aliases = _aliases2format(DocumentDetailsExtraction)
+)
+
+
+
+class ModelWrapperClient(object):
+    
     def __init__(self, config: ModelConfigQuant):
         self.config = config
-        self.headers = {
+        self.headers: Dict[str, str] = {
             'content-type': 'application/json',
             'Authorization': f'Bearer {config.api_key}'
         }
 
-        _default_payload = {
+        self._default_payload: Dict[str, str|bool|int|float] = {
             "model": self.config.model_id,
             "stream": False,
             "temperature": self.config.temperature,
             "top_p": self.config.top_p,
             "top_k": self.config.top_k,
-            "max_tokens": 500
+            "min_p": self.config.min_p,
+            "repetition_penalty": self.config.repetition_penalty,
+            "max_tokens": 512
         }
 
-        self._cover_payload = deepcopy(_default_payload)
-        self._cover_payload["response_format"] = self.cover_doc_reponse_format
-
-        self._law_payload = deepcopy(_default_payload)
-        self._law_payload["response_format"] = self.law_doc_reponse_format
-
-        # build examples
-        self.example_msgs = [{
-            'role':'system',
-            'content': self.cover_doc_inst
-        }]
-
-        for _ith, exp in enumerate(Examples().example_list):
-            _encoded_image = pdf2images(exp.path, return_base64_image= True)[0]
-            self.example_msgs.extend([{
-                'role':'user',
-                'content': [{
-                        'type': 'text',
-                        'text': f"\nVí dụ {_ith+1}:\nCâu hỏi: {exp.question}"
-                    },{
-                        'type': 'image_url',
-                        'image_url': {
-                            'url': f"data:image/png;base64,{_encoded_image}"
-                        }
-                    }]
-            },{
-                'role':'assistant',
-                'content': exp.answer
-            }])
-
-
-    async def forward(self, local_path_pdf:str, task: DOCUMENT_TASKS):
-        original_pages_images = pdf2images(local_path_pdf, return_base64_image= True)
+    async def forward(
+            self, 
+            local_path_pdf:str, 
+            task: DOCUMENT_TASKS
+        )->None|FINAL_RESPONSE_TYPES:
+        original_pages_images = pdf2images(local_path_pdf, return_base64_image= True)[:1]
 
         # select pages in dedicated index
         _num_pages = len(original_pages_images)
-        if task == "cover_document":
+        if task == "cover":
             page_idx = [0]
         else:    
-            page_idx = [0,1, _num_pages-1] if _num_pages >= 3 else [0,_num_pages-1]
+            page_idx = list(range(_num_pages))
         pages_images = list(map(original_pages_images.__getitem__, page_idx))
 
         # construct content field in standard format
-        if task == "cover_document":
-            request_content = [{
-                'type': 'text',
-                'text': self.cover_doc_query
-            }]
+        request_content: List[Dict[str, str]|Dict[str, str|Dict[str,str]]] = [{
+            'type': 'text',
+            'text': COVER_DOC_QUERY \
+                if task == "cover" \
+                else LAW_DOC_QUERY
+        }]
 
-        else:
-            request_content = [{
-                'type': 'text',
-                'text': self.law_doc_query
-            }]
-        
         request_content.extend([{
                 'type': 'image_url',
                 'image_url': {
@@ -122,56 +107,98 @@ Với văn bản chính sau, trích xuất thông tin trong văn bản.
         ])
 
         # construct payload and update with `self._default_payload`
-        if task == "cover_document":
-            msg = []
-            msg.extend(self.example_msgs)
-            msg.append({
+        payload: dict[str, Any] = {
+            "messages": [{
                 'role':'user',
                 'content': request_content
-            })
-            payload: dict[str, Any] = {
-                "messages": msg
-            }
-        else:
-            payload: dict[str, Any] = {
-                "messages": [{
-                    'role':'user',
-                    'content': request_content
-                }]
-            }
+            }]
+        }
         
-        if task == "cover_document":
-            payload.update(self._cover_payload)
-        else:
-            payload.update(self._law_payload)
-
+        payload.update(self._default_payload)
 
         # print(json.dumps(payload, indent = 4, ensure_ascii=False))
 
-
-        async with aiohttp.ClientSession(base_url=self.config.modal_url) as session:
-            async with session.post(
-                "/v1/chat/completions", 
-                json=payload, 
-                headers=self.headers,
-                timeout=7*60
-            ) as resp:
+        async with aiohttp.ClientSession(
+            base_url=self.config.modal_url
+            ) as session:
+            responses = await ModelWrapperClient._send(
+                session = session, 
+                headers = self.headers,
+                payload = payload,
+                timeout = 7*60,
                 
-                async for raw in resp.content:
-                    resp.raise_for_status()
-                    # extract new content and stream it
-                    line = raw.decode().strip()
-                    if not line or line == "data: [DONE]":
-                        continue
-                    if line.startswith("data: "):  # SSE prefix
-                        line = line[len("data: ") :]
+            )
+            if responses is not None:
+                return ModelWrapperClient._post_prosessing(
+                    responses=responses, 
+                    output_format = CoverDocumentExtraction \
+                        if task == 'cover' \
+                        else DocumentDetailsExtraction
+                )
+            else:
+                return None
 
-                    chunk = json.loads(line)
+    @staticmethod
+    async def _send(
+            session: aiohttp.ClientSession, 
+            headers: dict[str, str],
+            payload: dict[str, Any], 
+            timeout: int
+        )->List[str]|None:
+        
+        try:
+            total_response: List[str] = []
+            async with session.post(
+                    "/v1/chat/completions", 
+                    json=payload, 
+                    headers=headers,
+                    timeout=timeout
+                ) as resp:
                     
-                    assert (
-                        chunk["object"] == "chat.completion"
-                    )  # or something went horribly wrong
-                    print(chunk["choices"][0]["message"])
+                    async for raw in resp.content:
+                        resp.raise_for_status()
+                        # extract new content and stream it
+                        line = raw.decode().strip()
+                        if not line or line == "data: [DONE]":
+                            continue
+                        if line.startswith("data: "):  # SSE prefix
+                            line = line[len("data: ") :]
+
+                        chunk = json.loads(line)
+                        
+                        assert (
+                            chunk["object"] == "chat.completion"
+                        )
+                        total_response.append(chunk["choices"][0]["message"]['content'])
+            return total_response
+        
+        except (TimeoutError, Exception) as e:
+            logger.error("error in `_send` function, msg: {}".format(e))
+            return None
+
+    @staticmethod
+    def _post_prosessing(
+        responses: List[str], 
+        output_format: SCHEMAS_TYPES
+        )->FINAL_RESPONSE_TYPES:
+
+        outputs:FINAL_RESPONSE_TYPES = []
+        for _res in responses:
+            try:
+                json_data = re.sub(r'```json\n|\n```','',_res)
+
+                # validation via alias
+                parsed: SINGLE_RESPONSE_TYPES = output_format.model_validate_json(
+                    json_data, 
+                    by_alias=True
+                )
+                outputs.append(parsed)
+
+            except Exception as e:
+                logger.error("error in `_post_prosessing` function, msg: {}".format(e))
+                continue
+        
+        return outputs
 
     async def health_check(self):
         async with aiohttp.ClientSession(base_url=self.config.modal_url) as session:
